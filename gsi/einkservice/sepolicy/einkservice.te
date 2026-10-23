@@ -1,0 +1,26 @@
+# system_ext private sepolicy (BOARD_SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS). UNVERIFIED: never compiled.
+
+# --- relay path (default): only platform types, no vendor type names ---
+type inkpalm_prop, property_type;
+type inkpalm_persist_prop, property_type;
+
+# The app is platform-signed with sharedUserId android.uid.system -> domain system_app (seapp_contexts default
+# for platform-signed priv-apps). If the build puts it in a different domain, change the first argument.
+set_prop(system_app, inkpalm_prop)
+get_prop(system_app, inkpalm_prop)
+get_prop(system_app, inkpalm_persist_prop)
+# shell/adb users toggling the opt-in flag
+set_prop(shell, inkpalm_persist_prop)
+get_prop(shell, inkpalm_prop)
+# init already may set every property_type and read ${...} expansions; nothing needed here.
+
+# Task stack listener / getRunningTasks / overlay window / tile service are Binder calls into system_server
+# that system_app already makes (KompaktService runs in the same domain with the same calls).
+
+# --- direct path (persist.sys.inkpalm.eink_direct=1): ONLY for a build where the vendor type is visible ---
+# vendor_ebook_prop is defined by the stock *vendor* sepolicy (labels sys.eink.*). A system_ext policy cannot
+# reference it at build time (checkpolicy: unknown type) and AOSP neverallows coredomain from setting
+# vendor-internal props (UNVERIFIED which neverallow applies). Do not enable unless the relay is insufficient:
+#   set_prop(system_app, vendor_ebook_prop)
+# Which of the target props are labelled vendor_ebook_prop must be read from the device:
+#   adb shell su 0 sh -c 'strings /vendor/etc/selinux/vendor_property_contexts' | grep -E 'eink|mogu|fullmode|gamma'

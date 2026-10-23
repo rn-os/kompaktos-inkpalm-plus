@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.neoport.inkcontrol">
+
+    <!-- Granted by the user with:
+         adb shell pm grant org.neoport.inkcontrol android.permission.WRITE_SECURE_SETTINGS -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <!-- Frontlight panel writes Settings.System.SCREEN_BRIGHTNESS (granted via appops). -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+
+    <!-- The accessibility service must resolve activities of every app (home screen,
+         readers without a launcher icon such as NeoReader) to tell real app switches
+         from overlay windows. Sideloaded only, so the Play policy on this doesn't apply. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
+    <!-- Package visibility (API 30): lets the settings screen list launchable apps
+         without the broad QUERY_ALL_PACKAGES permission. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".App"
+        android:label="InkControl"
+        android:icon="@drawable/ic_launcher"
+        android:theme="@style/EinkTheme"
+        android:allowBackup="false">
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".FrontlightPanel"
+            android:label="Frontlight"
+            android:theme="@android:style/Theme.DeviceDefault.Light.Dialog.NoActionBar"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:exported="false" />
+
+        <!-- Public frontlight API for other apps (e.g. inkpalm+ side panel); see LightApi. -->
+        <receiver
+            android:name=".LightApi$Receiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="org.neoport.inkcontrol.action.SET_LIGHT" />
+            </intent-filter>
+        </receiver>
+        <provider
+            android:name=".LightApi$Provider"
+            android:authorities="org.neoport.inkcontrol.light"
+            android:exported="true" />
+
+        <!-- Auto power-off timer (AutoOff); only our own PendingIntent reaches it. -->
+        <receiver
+            android:name=".AutoOff$Alarm"
+            android:exported="false" />
+
+        <service
+            android:name=".AppWatcherService"
+            android:label="InkControl per-app e-ink"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <service
+            android:name=".RefreshTileService"
+            android:label="InkPalm: Full refresh"
+            android:icon="@drawable/ic_tile_t_refresh"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".ModeTileService"
+            android:label="InkPalm: E-ink mode"
+            android:icon="@drawable/ic_tile_t_mode"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".PresetTileService$Fast"
+            android:label="InkPalm: Fast"
+            android:icon="@drawable/ic_tile_t_fast"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="com.kompakt.service.CATEGORY_EINK_MODES" android:value="true" />
+        </service>
+
+        <service
+            android:name=".PresetTileService$Soft"
+            android:label="InkPalm: Fast, soft"
+            android:icon="@drawable/ic_tile_t_soft"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="com.kompakt.service.CATEGORY_EINK_MODES" android:value="true" />
+        </service>
+
+        <service
+            android:name=".PresetTileService$Dither"
+            android:label="InkPalm: Fast + dither"
+            android:icon="@drawable/ic_tile_t_dither"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="com.kompakt.service.CATEGORY_EINK_MODES" android:value="true" />
+        </service>
+
+        <service
+            android:name=".PresetTileService$Text"
+            android:label="InkPalm: Text"
+            android:icon="@drawable/ic_tile_t_text"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="com.kompakt.service.CATEGORY_EINK_MODES" android:value="true" />
+        </service>
+
+        <service
+            android:name=".PresetTileService$Quality"
+            android:label="InkPalm: Quality"
+            android:icon="@drawable/ic_tile_t_quality"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="com.kompakt.service.CATEGORY_EINK_MODES" android:value="true" />
+        </service>
+
+        <service
+            android:name=".PresetTileService$Auto"
+            android:label="InkPalm: Auto"
+            android:icon="@drawable/ic_tile_t_auto"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="com.kompakt.service.CATEGORY_EINK_MODES" android:value="true" />
+        </service>
+        <service
+            android:name=".LightTileService"
+            android:label="InkPalm: Frontlight"
+            android:icon="@drawable/ic_tile_t_light"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

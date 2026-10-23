@@ -1,0 +1,3 @@
+# Extra patch-directory name -> tree path mappings for patches/inkpalm/ (one "<name> <path>" per
+# line). Names upstream's patches/apply-patches.sh already maps (frameworks_base,
+# device_phh_treble, ...) need no line here; a line here overrides nothing, the first match wins.

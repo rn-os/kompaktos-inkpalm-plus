@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- InkControl as a privileged, platform-signed system app (build-layer). Platform-signed apps
+     get signature permissions anyway; listing them keeps ro.control_privapp_permissions=enforce
+     happy whichever way the check treats platform apps. -->
+<permissions>
+    <privapp-permissions package="org.neoport.inkcontrol">
+        <permission name="android.permission.WRITE_SECURE_SETTINGS"/>
+        <permission name="android.permission.WRITE_SETTINGS"/>
+    </privapp-permissions>
+</permissions>

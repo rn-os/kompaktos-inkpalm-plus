@@ -1,0 +1,20 @@
+# Never commit these: your own keys, your device backup, proprietary stock blobs, images.
+keys/
+build/
+log/
+build-layer/blobs/
+build-layer/out/
+build-layer/keys/
+lineage-priv/
+*.jks
+*.keystore
+*.p12
+*.pk8
+*.pem
+*.avbpubkey
+*.img
+*.zst
+*.apk
+*.so
+*.zip
+.DS_Store

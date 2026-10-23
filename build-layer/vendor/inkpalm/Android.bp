@@ -1,0 +1,74 @@
+// InkPalm Plus product layer (Soong half). build.sh copies build-layer/vendor/inkpalm into the
+// tree as vendor/inkpalm with symlinks resolved (Soong does not read paths outside the module
+// dir), so inkcontrol/ and vendor-fix/ are real copies of tools/inkcontrol and gsi/vendor-fix.
+// The stock blobs and the scripts at /system/phh/inkpalm are in Android.mk: Soong cannot
+// install outside <partition>/{bin,lib64,etc,...}.
+// UNVERIFIED: never built (no lineage-23.2 tree was available when this was written).
+
+// Stub libheif for the stock Android 11 libskia (see gsi/vendor-fix/heif_stub.c and README).
+// Installs as /system/lib64/inkpalm-vfix/libheif.so; init/inkpalm-vfix.rc stacks that dir into
+// the /vendor/lib64 overlay. Freestanding: no libc, no crt, nothing but the one symbol, like the
+// hand-built `clang -ffreestanding ... && ld.lld -shared -soname libheif.so` it replaces.
+cc_library_shared {
+    name: "libheif_inkpalm_stub",
+    stem: "libheif",
+    srcs: ["vendor-fix/heif_stub.c"],
+    relative_install_path: "inkpalm-vfix",
+    compile_multilib: "64",
+    nocrt: true,
+    system_shared_libs: [],
+    stl: "none",
+    cflags: [
+        "-O2",
+        "-ffreestanding",
+        "-fno-stack-protector",
+    ],
+}
+
+// InkControl (tools/inkcontrol) as a privileged system app signed with the platform key of THIS
+// build: it runs as platform_app, which the stock vendor policy lets set sys.eink.* directly
+// ("direct" backend, verified with a platform-signed APK on a test-keys GSI).
+android_app {
+    name: "InkControl",
+    srcs: ["inkcontrol/src/**/*.java"],
+    resource_dirs: ["inkcontrol/res"],
+    manifest: "inkcontrol/AndroidManifest.xml",
+
+    certificate: "platform",
+    privileged: true,
+    // Hidden APIs (SystemProperties, ServiceManager) are reached by reflection; platform_apis
+    // just stops the hidden-API checks from getting in the way.
+    platform_apis: true,
+    // tools/inkcontrol/build.sh builds with min/target 30 (needed for the stock eink binder on
+    // stock firmware); keep the same app behaviour here. UNVERIFIED with platform_apis.
+    min_sdk_version: "30",
+    target_sdk_version: "30",
+
+    optimize: {
+        enabled: false,
+    },
+
+    required: [
+        "privapp-permissions-org.neoport.inkcontrol.xml",
+        "initial-package-state_org.neoport.inkcontrol.xml",
+    ],
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-org.neoport.inkcontrol.xml",
+    src: "inkcontrol/privapp-permissions-org.neoport.inkcontrol.xml",
+    sub_dir: "permissions",
+}
+
+prebuilt_etc {
+    name: "initial-package-state_org.neoport.inkcontrol.xml",
+    src: "inkcontrol/initial-package-state_org.neoport.inkcontrol.xml",
+    sub_dir: "sysconfig",
+}
+
+// /system/etc/init/inkpalm-vfix.rc (build-layer variant, see the file header).
+prebuilt_etc {
+    name: "inkpalm-vfix.rc",
+    src: "init/inkpalm-vfix.rc",
+    sub_dir: "init",
+}

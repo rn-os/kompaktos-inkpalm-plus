@@ -1,0 +1,48 @@
+# /system_ext/etc/init/einkservice.rc  (UNVERIFIED on device; see DESIGN.md)
+#
+# init is the one domain that may set the vendor_ebook_prop / persist mogu props without vendor sepolicy
+# edits, so the app sets platform-owned sys.inkpalm.* props and init copies them.
+
+# Boot defaults before the app is up. Stock leaves sys.eink.mode at 7 (PART_GC16). Vendor init may already
+# set it: check `getprop sys.eink.mode` on a GSI boot with this file removed first.
+on early-boot
+    setprop sys.inkpalm.eink_mode 7
+    setprop sys.eink.mode 7
+
+# ---- relays: app -> real props ----
+on property:sys.inkpalm.eink_mode=*
+    setprop sys.eink.mode ${sys.inkpalm.eink_mode}
+
+on property:sys.inkpalm.full_frame=*
+    setprop sys.eink.one_full_mode_timeline ${sys.inkpalm.full_frame}
+
+on property:sys.inkpalm.refresh_type=*
+    setprop persist.sys.mogu.refresh_type ${sys.inkpalm.refresh_type}
+
+on property:sys.inkpalm.system_type=*
+    setprop persist.sys.mogu.system_type ${sys.inkpalm.system_type}
+
+on property:sys.inkpalm.fullmode_cnt=*
+    setprop persist.vendor.fullmode_cnt ${sys.inkpalm.fullmode_cnt}
+
+on property:sys.inkpalm.gray256=*
+    setprop persist.sys.mogu.256gray ${sys.inkpalm.gray256}
+
+on property:sys.inkpalm.gamma=*
+    setprop debug.sf.gamma.gamma ${sys.inkpalm.gamma}
+
+# ---- opt-in vendor services (libandroid_servers.so EinkService natives; unknown semantics) ----
+# Stock natives: init()=ctl.start einkdrawpath, kill()=ctl.stop einkdrawpath,
+#                standby()=ctl.start standby, quitStandby()=ctl.stop standby.
+# Enable with: adb shell setprop persist.sys.inkpalm.standby_relay 1  (and app pref standby_relay=true)
+on property:sys.inkpalm.standby=1 && property:persist.sys.inkpalm.standby_relay=1
+    start standby
+
+on property:sys.inkpalm.standby=0 && property:persist.sys.inkpalm.standby_relay=1
+    stop standby
+
+on property:sys.inkpalm.drawpath=1 && property:persist.sys.inkpalm.standby_relay=1
+    start einkdrawpath
+
+on property:sys.inkpalm.drawpath=0 && property:persist.sys.inkpalm.standby_relay=1
+    stop einkdrawpath

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 16 starts new system apps stopped on a fresh /data (KompaktService hit this), which
+     would keep InkControl's tiles/service from starting until it is opened once. -->
+<config>
+    <initial-package-state package="org.neoport.inkcontrol" stopped="false"/>
+</config>

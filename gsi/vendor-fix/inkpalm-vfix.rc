@@ -1,0 +1,46 @@
+# Moaan InkPalm Plus display fix (see gsi/vendor-fix/README.md).
+# The overlay that adds stock libskia & co. to /vendor/lib64 MUST be mounted by init itself:
+# overlayfs opens the real files with the mounter's credentials, and every domain may use
+# init's fds, but not those of other domains (a phhsu_daemon mount made SurfaceFlinger,
+# zygote and the HALs fail with "avc: denied { use } ... tcontext=phhsu_daemon tclass=fd").
+# post-fs-data runs before `class_start hal`, so the composer sees the libs on first start.
+on post-fs-data && property:ro.product.vendor.device=rk3566_eink
+    mount overlay overlay /vendor/lib64 ro lowerdir=/system/phh/inkpalm/lib64:/vendor/lib64
+    start inkpalm_vfix
+
+# Logs the result and restarts the display stack only if it is not running.
+service inkpalm_vfix /system/phh/inkpalm/inkpalm-vfix.sh
+    user root
+    group root
+    oneshot
+    disabled
+
+# E-ink bridge for GSIs without our platform key: applies InkControl's mode requests
+# (whitelisted sys.eink.* numeric values only). See eink-bridge.sh.
+service inkpalm_eink_bridge /system/phh/inkpalm/eink-bridge.sh
+    user root
+    group root
+    disabled
+
+on property:sys.boot_completed=1 && property:ro.product.vendor.device=rk3566_eink
+    start inkpalm_eink_bridge
+
+# One-time first-boot defaults (wake-on-plug off, density 312). See inkpalm-defaults.sh.
+service inkpalm_defaults /system/phh/inkpalm/inkpalm-defaults.sh
+    user root
+    group root
+    oneshot
+    disabled
+
+on property:sys.boot_completed=1 && property:ro.product.vendor.device=rk3566_eink
+    start inkpalm_defaults
+
+# Power-off screen (see inkpalm-poweroff.sh): only on shutdown, only with a custom image.
+service inkpalm_poweroff /system/phh/inkpalm/inkpalm-poweroff.sh
+    user root
+    group root
+    oneshot
+    disabled
+
+on property:sys.shutdown.requested=* && property:ro.product.vendor.device=rk3566_eink
+    start inkpalm_poweroff

@@ -1,0 +1,24 @@
+# InkPalm build layer: labels for the files bake.sh used to label by hand.
+# build.sh appends this block to $TREE/device/phh/treble/sepolicy/file_contexts (between
+# markers, re-written on every run; set INKPALM_FC_INJECT=0 to skip). The post-build check in
+# build.sh reads the labels back from system.img and, with INKPALM_FIXUP=1 (default), sets
+# them with debugfs exactly like bake.sh if the build did not.
+# UNVERIFIED: whether lineage-23.2's sepolicy tests accept vendor_file for a /system path. If
+# the build stops in a sepolicy test, build with INKPALM_FC_INJECT=0 (the fixup does the job).
+/system/phh/inkpalm(/.*)?                u:object_r:system_file:s0
+# The merged /vendor/lib64 takes the top layer's label, so these must be vendor_file.
+/system/phh/inkpalm/lib64(/.*)?          u:object_r:vendor_file:s0
+/system/lib64/inkpalm-vfix(/.*)?         u:object_r:vendor_file:s0
+# init auto-transitions phhsu_exec -> phhsu_daemon (phh's policy).
+/system/phh/inkpalm/[^/]+\.sh            u:object_r:phhsu_exec:s0
+
+# TODO(sepolicy, retires eink-bridge.sh): system_ext/plat policy for the platform-signed
+# InkControl (domain platform_app), roughly:
+#   genfscon proc /aw99703     u:object_r:proc_inkpalm_light:s0
+#   genfscon proc /aw99703_sec u:object_r:proc_inkpalm_light:s0
+#   type proc_inkpalm_light, fs_type, proc_type;
+#   allow platform_app proc_inkpalm_light:dir search;
+#   allow platform_app proc_inkpalm_light:file rw_file_perms;
+#   (vendor_ebook_prop: stock vendor policy already lets platform_app set it, verified on a GSI)
+# UNVERIFIED: appdomain neverallows on proc types; the sleep image (/data/misc/standby*.png,
+# system_data_file) cannot be written by any app domain and needs a small init/system helper.

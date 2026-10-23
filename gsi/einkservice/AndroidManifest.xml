@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Platform-signed, system uid, persistent. NOT built here (no AOSP tree): see DESIGN.md. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.neoport.einkservice"
+    android:sharedUserId="android.uid.system">
+
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <uses-permission android:name="android.permission.STATUS_BAR" />
+    <uses-permission android:name="android.permission.REAL_GET_TASKS" />
+    <uses-permission android:name="android.permission.MANAGE_ACTIVITY_TASKS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <application
+        android:name=".EinkApplication"
+        android:label="E-ink service"
+        android:persistent="true"
+        android:directBootAware="true"
+        android:defaultToDeviceProtectedStorage="true"
+        android:allowBackup="false">
+
+        <receiver
+            android:name=".EinkReceiver"
+            android:directBootAware="true"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="org.neoport.einkservice.action.REFRESH" />
+                <action android:name="org.neoport.einkservice.SET_MODE" />
+                <action android:name="org.neoport.einkservice.SET_APP_MODE" />
+                <action android:name="org.neoport.einkservice.SET_PREF" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".Tiles$ModeTile"
+            android:exported="true"
+            android:icon="@drawable/ic_eink"
+            android:label="E-ink mode"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".Tiles$RefreshTile"
+            android:exported="true"
+            android:icon="@drawable/ic_eink"
+            android:label="Refresh screen"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

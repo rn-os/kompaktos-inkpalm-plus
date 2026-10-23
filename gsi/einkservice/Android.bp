@@ -1,0 +1,49 @@
+// InkPalm e-ink service for a LineageOS/TrebleDroid GSI build. Place under e.g. vendor/inkpalm/einkservice/.
+// UNVERIFIED: never built (no AOSP tree here).
+
+android_app {
+    name: "InkPalmEinkService",
+
+    srcs: ["src/**/*.java"],
+    resource_dirs: ["res"],
+    manifest: "AndroidManifest.xml",
+
+    // sharedUserId android.uid.system + hidden APIs (SystemProperties, ActivityTaskManager, TaskStackListener).
+    certificate: "platform",
+    privileged: true,
+    platform_apis: true,
+    system_ext_specific: true,
+
+    optimize: {
+        enabled: false,
+    },
+
+    required: [
+        "privapp-permissions-org.neoport.einkservice.xml",
+        "einkservice.rc",
+        "initial-package-state_org.neoport.einkservice.xml",
+    ],
+}
+
+// Copies sys.inkpalm.* (set by the app) to the real vendor props; see DESIGN.md section 3.
+prebuilt_etc {
+    name: "einkservice.rc",
+    src: "einkservice.rc",
+    sub_dir: "init",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-org.neoport.einkservice.xml",
+    src: "privapp-permissions-org.neoport.einkservice.xml",
+    sub_dir: "permissions",
+    system_ext_specific: true,
+}
+
+// Android 16 starts new system apps stopped on a fresh /data (KompaktService hit this); harmless on 14.
+prebuilt_etc {
+    name: "initial-package-state_org.neoport.einkservice.xml",
+    src: "initial-package-state_org.neoport.einkservice.xml",
+    sub_dir: "sysconfig",
+    system_ext_specific: true,
+}

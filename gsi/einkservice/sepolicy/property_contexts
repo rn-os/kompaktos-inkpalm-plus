@@ -1,0 +1,3 @@
+# system_ext_property_contexts (or private/property_contexts in a system_ext private sepolicy dir)
+sys.inkpalm.                u:object_r:inkpalm_prop:s0 prefix
+persist.sys.inkpalm.        u:object_r:inkpalm_persist_prop:s0 prefix

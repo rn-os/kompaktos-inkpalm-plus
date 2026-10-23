@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="service_desc">Watches which app is in the foreground (package name only; no screen content is read) so InkControl can switch the e-ink refresh mode and colour inversion per app.</string>
+</resources>

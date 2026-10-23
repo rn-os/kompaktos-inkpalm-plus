@@ -1,0 +1,9 @@
+<!--
+ InkPalm Plus: default to gesture navigation. The device has a single programmable capacitive
+ button, so 3-button navigation is not usable as the default. Mutable: still switchable in
+ Settings. Applies on first boot / after a data wipe (later the user's choice in
+ /data/system/overlays.xml wins). Installed as /system/product/overlay/config/config.xml.
+-->
+<config>
+    <overlay package="com.android.internal.systemui.navbar.gestural" mutable="true" enabled="true" />
+</config>
