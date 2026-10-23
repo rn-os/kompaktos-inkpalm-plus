@@ -73,7 +73,7 @@ Tested by the author on one InkPalm Plus (stock build `MAS_EPD305_L81B804_T44_V0
 Vanilla, slot B. A diagnostics run on the flashed image passed 25 checks.
 
 Works:
-- Boot, display (Moaan's own e-ink HWC), touch, gesture navigation, SELinux enforcing
+- Boot, display (Moaan's own e-ink HWC), touch, SELinux enforcing (no navigation bar, so no gesture navigation: Back comes from InkPalm+)
 - E-ink modes (Fast, Soft, Dither, Text, Quality, Auto), full refresh on demand, ghost clearing
   (a full refresh every 40 partial ones)
 - Front light, cold and warm, off at screen-off and restored at screen-on
