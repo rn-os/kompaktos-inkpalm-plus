@@ -9,27 +9,39 @@ listed below. **You can brick your phone. Read [Risks](#risks-and-no-warranty) f
 
 Not affiliated with Moaan or Mudita. Nothing here is endorsed by them, by KompaktOS or by LineageOS.
 
-<!-- TODO(photos): replace with a real photo of the InkPalm Plus running KompaktOS, taken with a camera.
-     Save as docs/images/device-front.jpg and uncomment.
-<img src="docs/images/device-front.jpg" width="480" alt="InkPalm Plus running KompaktOS">
--->
-> **Photo placeholder:** `docs/images/device-front.jpg` (the phone running KompaktOS, in hand or on a table).
-
 <p>
-  <img src="docs/images/kompaktos-home.png" width="300" alt="KompaktOS home screen on the InkPalm Plus">
-  <img src="docs/images/screen-and-light-panel.png" width="300" alt="InkPalm+ Screen and light panel: screen modes, full refresh, contrast, brightness, warmth">
+  <img src="docs/images/kompaktos-home.png" width="220" alt="KompaktOS home screen on the InkPalm Plus">
+  <img src="docs/images/screen-and-light-panel.png" width="220" alt="InkPalm+ Screen and light panel: screen modes, full refresh, contrast, brightness, warmth">
+  <img src="docs/images/inkpalm-plus-recents.png" width="220" alt="InkPalm+ recent apps panel on the right edge">
 </p>
 
-Left: the KompaktOS launcher on the InkPalm Plus. Right: the e-ink and front light panel from
-[InkPalm+](https://github.com/rn-os/inkpalm-plus), opened from the screen edge.
+Left: the KompaktOS launcher. Middle: InkPalm+'s *Screen & light* panel, opened from the left edge.
+Right: InkPalm+'s recent apps panel, opened from the right edge.
 
-<!-- TODO(photos): more camera photos, each saved in docs/images/:
-     device-sleep-screen.jpg   the sleep (standby) picture on the powered-down panel
-     device-poweroff.jpg       the power-off picture
-     device-side.jpg           the phone from the side / next to the stock firmware, optional
-     Settings > About screenshot on KompaktOS: docs/images/about.png -->
-> **More photo placeholders:** `docs/images/device-sleep-screen.jpg`, `docs/images/device-poweroff.jpg`,
-> `docs/images/about.png` (Settings, About, on KompaktOS).
+## InkPalm+: the e-ink and light controls
+
+KompaktOS was made for the Mudita Kompakt, and its e-ink and front light controls do not drive the
+InkPalm Plus's panel. **[InkPalm+](https://github.com/rn-os/inkpalm-plus)** fills that gap and is meant to
+ship alongside this port. It is installed with [Obtainium](https://github.com/ImranR98/Obtainium), and it gives you:
+
+- **Screen modes:** Fast, Soft, Dither, Text, Quality and Auto, set per app or for everywhere.
+- **Full refresh** on demand, and **contrast** (lighter or darker).
+- **Front light:** brightness, warmth, and Auto (Android's adaptive brightness).
+- **Edge Back:** a swipe in from the screen edge goes back, because KompaktOS has no navigation bar.
+- **Touch button:** a short touch is Home; holding it is a full refresh, as on the stock firmware.
+- **Recent apps** in a panel on the right edge.
+- **Sleep screen, power-off screen** (including Moaan's panda picture) **and auto power-off** after
+  4 to 24 hours asleep on battery.
+
+These controls work through this image's small root bridge (`gsi/vendor-fix/eink-bridge.sh`), which only
+accepts whitelisted requests from the app. On the stock firmware the KompaktOS panel does nothing.
+
+**Honest status:** the KompaktOS features listed above are in InkPalm+'s *upcoming* release. They are on
+its development branch (`merge-inkcontrol`) and have not been released yet, so there is no download for
+them today. Until it is out, the app side of this port is not available as a ready-made install.
+
+**InkControl is retired.** It was an earlier app that did the same job (`tools/inkcontrol` here, kept only
+as history). If you have it, uninstall it: running both would have two apps driving the screen.
 
 ## What this is
 
@@ -52,9 +64,8 @@ stock Android 11 vendor, which was never made for it:
   Never run. Treat it as notes.
 - **`gsi/einkservice/`**: an early design for a system e-ink service. Superseded by the bridge and InkPalm+.
 
-The companion app is **[InkPalm+](https://github.com/rn-os/inkpalm-plus)**: its *Screen & light* panel
-is the user interface for e-ink modes and the front light on KompaktOS. It replaces `tools/inkcontrol`
-in this repo, which is retired and kept only as history.
+The companion app is **[InkPalm+](https://github.com/rn-os/inkpalm-plus)** (see above). It replaces
+`tools/inkcontrol` in this repo, which is retired and kept only as history.
 
 ## What works, and what doesn't
 
@@ -107,7 +118,8 @@ This repo ships no Moaan, Rockchip, Google or KompaktOS binaries, on purpose. Yo
 5. **A Mac or Linux computer** with `adb` and `fastboot` (platform-tools), Python 3, clang and `lld` for the stub,
    and e2fsprogs (`e2fsck`, `resize2fs`, `debugfs`; `bake.sh` expects Homebrew's path on macOS and may need a path change on Linux).
    `build_super.py` is plain Python (no `lpmake` needed).
-6. **The InkPalm+ app** from its [releases](https://github.com/rn-os/inkpalm-plus/releases), for the e-ink and light controls.
+6. **The InkPalm+ app** (via Obtainium, from [its repo](https://github.com/rn-os/inkpalm-plus)), for the e-ink and light controls.
+   The KompaktOS features are in its upcoming release and are not downloadable yet (see above).
 7. Optional: your own PNGs for the sleep and power-off screens. Moaan's pictures are not included.
 
 ## Build and flash, step by step
@@ -119,7 +131,7 @@ This repo ships no Moaan, Rockchip, Google or KompaktOS binaries, on purpose. Yo
    (set `GROW_MB=0` if the image must keep its size, and `BOOTANIM=` for a rescaled boot animation; see the script header).
 4. Build a `super` image from your own stock super backup: `tools/build_super.py <stock_super.img> <baked.img> <out_super.img>`.
 5. Flash it as described in **[docs/FLASH-KOMPAKTOS.md](docs/FLASH-KOMPAKTOS.md)**. This **erases `super`, `userdata` and `metadata`**.
-6. First boot takes several minutes with no feedback on e-ink. Install InkPalm+, grant its permissions, enable its accessibility service.
+6. First boot takes several minutes with no feedback on e-ink. Install InkPalm+ once its KompaktOS release is out, grant its permissions, enable its accessibility service.
 7. To go back to stock: **[docs/REVERT.md](docs/REVERT.md)** (flash your stock `super` backup, wipe, reboot).
 
 Other docs: [docs/gsi-scoping.md](docs/gsi-scoping.md) (research on GSIs for this device, some of it

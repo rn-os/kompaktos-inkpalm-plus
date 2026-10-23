@@ -94,6 +94,9 @@
   /product/etc/build.prop sets traced.relay_producer_port=vsock://-1:2010 and the 4.19 kernel
   has no vsock (errno 97). Harmless (tracing only); fix later by clearing the prop early in
   our rc. Widevine L3 only (no liboemcrypto) — normal on a GSI.
+- **Next image (not flashed yet):** standby.req export=1 (vendor power-off art → app's files dir,
+  for InkPalm+'s Panda option; tested from a copy, files already exported on the device).
+  Power-key-doesn't-wake bug under investigation (system side, not the app).
 - Still to test on the new image: auto power-off end to end (real shutdown, shows the panda),
   power-menu shutdown shows the panda, frontlight after long unplugged sleep, microG Self-Check.
 - After the device work (incl. the InkPalm+ merge session's testing): user turns off Rooted

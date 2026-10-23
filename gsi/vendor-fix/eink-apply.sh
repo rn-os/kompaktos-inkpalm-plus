@@ -14,6 +14,9 @@
 #              system_data_file); reset=1 -> remove them (vendor default art comes back)
 #              poweroff=1 / poweroff_reset=1 -> same for files/poweroff.png -> /data/misc/
 #              poweroff{,_nopower}.png (shown by the HWC at shutdown, see docs/sleep-screen.md)
+#              export=1 -> copy the vendor art /vendor/media/poweroff{,_nopower}.png (apps may
+#              not read vendor_file) to files/vendor_poweroff{,_nopower}.png, owned by the app,
+#              0600, so the app can compose its own power-off screen from the device's art
 #   power.req: off=1 -> shut down (InkControl auto power-off), only if the screen is off and
 #              no charger is connected right now, so a stray request can't kill a device in use
 case "$3" in
@@ -35,6 +38,17 @@ case "$3" in
             rm -f $M/standby.png $M/standby_charge.png $M/standby_lowpower.png
         elif grep -q '^apply=1$' "$R"; then
             install standby standby standby_charge standby_lowpower
+        fi
+        if grep -q '^export=1$' "$R"; then
+            u=$(stat -c %u "$DIR")
+            for n in poweroff poweroff_nopower; do
+                # Built outside the app's dir, then renamed in: a rename replaces whatever
+                # the app put at the target (even a symlink) instead of following it.
+                t=/data/local/tmp/inkpalm-export.$$
+                cp /vendor/media/$n.png $t && chown $u:$u $t && chmod 600 $t &&
+                    mv -f $t "$DIR/vendor_$n.png" && restorecon "$DIR/vendor_$n.png"
+                rm -f $t
+            done
         fi
         if grep -q '^poweroff_reset=1$' "$R"; then
             rm -f $M/poweroff.png $M/poweroff_nopower.png
