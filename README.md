@@ -13,6 +13,7 @@ Not affiliated with Moaan or Mudita. Nothing here is endorsed by them, by Kompak
   <img src="docs/images/kompaktos-home.png" width="220" alt="KompaktOS home screen on the InkPalm Plus">
   <img src="docs/images/screen-and-light-panel.png" width="220" alt="InkPalm+ Screen and light panel: screen modes, full refresh, contrast, brightness, warmth">
   <img src="docs/images/inkpalm-plus-recents.png" width="220" alt="InkPalm+ recent apps panel on the right edge">
+  <img src="docs/images/inkpalm-plus-settings.png" width="220" alt="InkPalm+ Screen and light settings: KompaktOS bridge, front light, sleep and power-off screens">
 </p>
 
 Left: the KompaktOS launcher. Middle: InkPalm+'s *Screen & light* panel, opened from the left edge.
@@ -36,9 +37,7 @@ ship alongside this port. It is installed with [Obtainium](https://github.com/Im
 These controls work through this image's small root bridge (`gsi/vendor-fix/eink-bridge.sh`), which only
 accepts whitelisted requests from the app. On the stock firmware the KompaktOS panel does nothing.
 
-**Honest status:** the KompaktOS features listed above are in InkPalm+'s *upcoming* release. They are on
-its development branch (`merge-inkcontrol`) and have not been released yet, so there is no download for
-them today. Until it is out, the app side of this port is not available as a ready-made install.
+These features are in **InkPalm+ 1.1.0** and later ([release](https://github.com/rn-os/inkpalm-plus/releases/tag/v1.1.0)).
 
 **InkControl is retired.** It was an earlier app that did the same job (`tools/inkcontrol` here, kept only
 as history). If you have it, uninstall it: running both would have two apps driving the screen.
@@ -103,7 +102,9 @@ Known limits and open items:
 This repo ships no Moaan, Rockchip, Google or KompaktOS binaries, on purpose. You supply:
 
 1. **An InkPalm Plus with an unlocked bootloader**, and a USB-C cable (direct, not a hub).
-   Unlocking wipes the phone; how to do it is up to you and Moaan's instructions. TODO(maintainer): link a source.
+   The InkPalm Plus appears to ship with its bootloader unlocked: the author's device reported `ro.boot.flash.locked=0`
+   on stock, and fastbootd reports `unlocked: yes` (check with `adb reboot fastboot`, then `fastboot getvar unlocked`).
+   We know of no device-specific unlock guide; if yours says locked, stop here.
 2. **A full backup of your stock firmware, made from your own device.** Use `tools/backup_stock_partitions.sh`
    (needs a booted test GSI with `adb root`, because Moaan's loader blocks reads past 32 MiB) and
    `tools/backup_super_chunked.sh`. You need at least `super`, `boot_b`, `vbmeta_b` and `dtbo_b`, with checksums.
@@ -112,14 +113,14 @@ This repo ships no Moaan, Rockchip, Google or KompaktOS binaries, on purpose. Yo
    `libskia.so`, `libdng_sdk.so`, `libft2.so`, `libandroidicu.so`, `libicuuc.so`, `libicui18n.so`.
    `build-layer/extract-blobs.sh` pulls them out of your `super.img` backup. They are Moaan/Google code and are
    not redistributed here. The stub `libheif.so` is built from `gsi/vendor-fix/heif_stub.c` (clang, see `gsi/vendor-fix/README.md`).
-4. **The KompaktOS 1.2 Global Vanilla system image**, from its own source ([KompaktOS](https://github.com/gezimos/KompaktOS),
+4. **The KompaktOS 1.2 Global Vanilla system image**: `KompaktOS-1.2-Global-Vanilla.zip` (holds `system.img` and `product.img`)
+   from the [KompaktOS v1.2 release](https://github.com/gezimos/KompaktOS/releases/tag/v1.2) ([KompaktOS](https://github.com/gezimos/KompaktOS),
    which builds on MisterZtr's LineageOS GSI, see Credits). Use the EXT4 variant (EROFS needs kernel 5.4).
-   TODO(maintainer): state the exact release page and file name you used.
 5. **A Mac or Linux computer** with `adb` and `fastboot` (platform-tools), Python 3, clang and `lld` for the stub,
    and e2fsprogs (`e2fsck`, `resize2fs`, `debugfs`; `bake.sh` expects Homebrew's path on macOS and may need a path change on Linux).
    `build_super.py` is plain Python (no `lpmake` needed).
 6. **The InkPalm+ app** (via Obtainium, from [its repo](https://github.com/rn-os/inkpalm-plus)), for the e-ink and light controls.
-   The KompaktOS features are in its upcoming release and are not downloadable yet (see above).
+   Version 1.1.0 or later.
 7. Optional: your own PNGs for the sleep and power-off screens. Moaan's pictures are not included.
 
 ## Build and flash, step by step
@@ -131,7 +132,7 @@ This repo ships no Moaan, Rockchip, Google or KompaktOS binaries, on purpose. Yo
    (set `GROW_MB=0` if the image must keep its size, and `BOOTANIM=` for a rescaled boot animation; see the script header).
 4. Build a `super` image from your own stock super backup: `tools/build_super.py <stock_super.img> <baked.img> <out_super.img>`.
 5. Flash it as described in **[docs/FLASH-KOMPAKTOS.md](docs/FLASH-KOMPAKTOS.md)**. This **erases `super`, `userdata` and `metadata`**.
-6. First boot takes several minutes with no feedback on e-ink. Install InkPalm+ once its KompaktOS release is out, grant its permissions, enable its accessibility service.
+6. First boot takes several minutes with no feedback on e-ink. Install InkPalm+ (1.1.0 or later), grant its permissions, enable its accessibility service.
 7. To go back to stock: **[docs/REVERT.md](docs/REVERT.md)** (flash your stock `super` backup, wipe, reboot).
 
 Other docs: [docs/gsi-scoping.md](docs/gsi-scoping.md) (research on GSIs for this device, some of it
@@ -162,12 +163,10 @@ Keep your backup somewhere safe, and test restoring it before you rely on the ph
 - **Moaan**: maker of the InkPalm Plus. Its stock firmware and libraries are theirs; none are included here.
 - **[InkPalm+](https://github.com/rn-os/inkpalm-plus)**: the companion app (and where InkControl's features went).
 - The InkPalm Plus hardware overview: [CNX Software](https://www.cnx-software.com/2022/05/25/150-inkpalm-plus-ereader-features-rk3566-soc-5-84-inch-display/).
-- TODO(maintainer): microG, Shizuku or others you want to thank; none of these were confirmed in the docs as dependencies of this repo.
 
 Not affiliated with Moaan or Mudita.
 
 ## License
 
-TODO(maintainer): no license has been chosen yet. Until one is added, all rights are reserved.
-Note that `gsi/vendor-fix`, `tools/` and the docs are original work; the stock libraries and the KompaktOS
-image are not part of this repo and keep their own licenses.
+Apache License 2.0, see [LICENSE](LICENSE). It covers this repo's own scripts, bridge, tools and docs. The stock
+libraries, Moaan's pictures and KompaktOS itself are not part of this repo and stay under their owners' terms.

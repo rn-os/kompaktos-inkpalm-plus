@@ -34,7 +34,6 @@ Some caveats, so nobody is surprised:
 - **This is a hobby port tested on one device (mine). You can brick your phone.** There's a way back to stock (reflash your own stock `super` backup, then wipe), and it's written up in the repo, but read it before you flash anything.
 - **You bring the proprietary pieces yourself:** a backup of your own stock firmware, and the stock Android 11 display libraries from it. Nothing from Moaan is in the repo. You also get KompaktOS from its own source, not from me.
 - Flashing erases the stock system and your data, so back up first.
-- The InkPalm+ KompaktOS features are in its upcoming release. [TODO: link or version number once it's out]
 - One known issue: the power button sometimes doesn't wake the phone. I'm still looking into it.
 - The English panda power-off screen needs the latest image build [TODO: image version].
 - First boot can take several minutes on e-ink with no feedback.
@@ -45,7 +44,7 @@ Not affiliated with Moaan or Mudita. Thanks to KompaktOS, LineageOS, the GSI bui
 
 1. Read the Risks section and docs/REVERT.md in the repo, and make your own backup
 2. Follow docs/FLASH-KOMPAKTOS.md
-3. In Obtainium, add `https://github.com/rn-os/inkpalm-plus` for the e-ink and light controls [TODO: confirm the release with the KompaktOS features is out]
+3. In Obtainium, add `https://github.com/rn-os/inkpalm-plus` for the e-ink and light controls (1.1.0 or later)
 
 GitHub: https://github.com/rn-os/kompaktos-inkpalm-plus
 
