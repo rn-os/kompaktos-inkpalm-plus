@@ -11,6 +11,7 @@ Not affiliated with Moaan or Mudita. Nothing here is endorsed by them, by Kompak
 
 <p>
   <img src="docs/images/kompaktos-home.png" width="220" alt="KompaktOS home screen on the InkPalm Plus">
+  <img src="docs/images/kompaktos-about.png" width="220" alt="Settings, About device on the InkPalm Plus: Android version 16, LineageOS 23.2">
   <img src="docs/images/screen-and-light-panel.png" width="220" alt="InkPalm+ Screen and light panel: screen modes, full refresh, contrast, brightness, warmth">
   <img src="docs/images/inkpalm-plus-recents.png" width="220" alt="InkPalm+ recent apps panel on the right edge">
   <img src="docs/images/inkpalm-plus-settings.png" width="220" alt="InkPalm+ Screen and light settings: KompaktOS bridge, front light, sleep and power-off screens">
