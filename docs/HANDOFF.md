@@ -137,6 +137,10 @@
   logs user_def_img=poweroff.png) BEFORE `svc power shutdown`; the init hook sees it predrawn and
   only keeps the 60 s safety net. Prop stays set until zygote-start clears it (a property-only
   rc trigger cleared it instantly at runtime). Log: /data/misc/inkpalm/poweroff.log.
+- **AOD vs auto power-off (system-vanilla-20261026b.img, verified live 2026-10-26):** InkPalm+'s
+  Live alarm (5-min marks) could fire a redraw between the predraw and the shutdown and wake the
+  panel. power.req now creates /dev/inkpalm-poweroff (tmpfs) and redraw refuses while it exists.
+  regress --live-poweroff checks the hook logged "predrawn, skipping" (31 PASS).
 - `tools/regress.sh` (30 PASS): default checks incl. predraw dry runs with HWC-draw proof;
   `--live-poweroff --yes` = automated real power-off over USB (user only presses power to boot);
   `--arm-poweroff --yes` / `--after-poweroff` = unplugged path through the bridge.
