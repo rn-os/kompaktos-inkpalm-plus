@@ -18,3 +18,4 @@ lineage-priv/
 *.so
 *.zip
 .DS_Store
+regress-results/

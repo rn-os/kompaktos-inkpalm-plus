@@ -96,11 +96,50 @@
   our rc. Widevine L3 only (no liboemcrypto) — normal on a GSI.
 - **Next image (not flashed yet):** standby.req export=1 (vendor power-off art → app's files dir,
   for InkPalm+'s Panda option; tested from a copy, files already exported on the device).
-  Power-key-doesn't-wake bug under investigation (system side, not the app).
+  **Power key didn't wake from sleep — FIXED, flashed (system-vanilla-20261023c.img).** Cause:
+  config_supportLongPressPowerWhenNonInteractive=false (AOSP default; stock Moaan vendor never
+  set it), so Lineage 23's PhoneWindowManager dropped presses that start asleep. Fix: RRO
+  `gsi/vendor-fix/power-wake-overlay` (targetSdk 36, not static — a static/SDK-30 build stayed
+  STATE_NO_IDMAP) enabled + immutable via product-overlay-config.xml. Verified: 5/5 wakes,
+  3/3 sleeps with the torch workaround back at 0. **Lesson: in overlay config.xml immutable
+  entries must precede mutable ones, or zygote dies parsing it and the device boot-loops**
+  (happened once, fixed by reflash). Also in 20261023c: traced vsock relay port cleared
+  (traced runs). build-layer: overlay added (Android.bp runtime_resource_overlay, untested).
 - Still to test on the new image: auto power-off end to end (real shutdown, shows the panda),
   power-menu shutdown shows the panda, frontlight after long unplugged sleep, microG Self-Check.
 - After the device work (incl. the InkPalm+ merge session's testing): user turns off Rooted
   debugging.
+
+## 2026-10-25 fixes
+- Flashed `system-vanilla-20261025.img`: power-off screen now wakes FIRST, sets
+  sys.power.shutdown only once the display is on, one SLEEP (+1 retry), forces sys.powerctl at
+  60 s. Waking with the flag set hung the vendor composer (watchdog loop) — likely cause of
+  "stuck on powering off". 3/3 dry runs clean. **Real auto power-off VERIFIED 2026-10-25** (tools/regress.sh
+  --arm-poweroff: panda shown, full power-off, boot reason shutdown,userrequested, no watchdog).
+- 29 unfit packages removed for user 0 (dialer, messaging, camera, FM, SIM/eSIM/IMS, cell
+  broadcast, emergency, SE, phh IMS overlays) + Kompakt launcher activity disabled; reboot
+  verified. Same list = defaults v3 (marker set by hand on this device). Not yet removed from
+  the image itself (bake) — optional.
+- Battery: no background drain; screen is ~70% (attributed to the app in front). Auto
+  brightness reworked in InkPalm+ (merge-inkcontrol a0949b9/e614dfe; dark-room floor ~30%).
+- B&W QS/Settings: mockups in docs/mockups/qs-theme/; real B&W needs our own build (Monet
+  re-tints at runtime; KompaktOS "two inks" patches). Kompakt "Smallest width" 440 had forced
+  density 174 (fixed: 312).
+
+- **Composer hang on wake after the power-off image — FIXED (system-vanilla-20261025b.img):** the
+  HWC's sys.power.shutdown path sends the logo as EPD_POWER_OFF (20); the kernel's ebc_thread then
+  exits for good, so any later wake blocks the composer in EBC_GET_BUFFER (mutex held) →
+  system_server watchdog loop. Now drawn as EPD_SUSPEND (18) through the standby path via
+  persist.sys.mogu.wallpaper (cleared after, and at boot if left set). regress.sh dry runs 3/3
+  with ebc_thread alive; earlier "clean" dry runs had silently killed it.
+- **Power-off screen final design (system-vanilla-20261025b.img, VERIFIED live 2026-10-25):** the
+  bridge runs `inkpalm-poweroff.sh predraw` (wallpaper prop → wake, LEDs off → standby sleep, HWC
+  logs user_def_img=poweroff.png) BEFORE `svc power shutdown`; the init hook sees it predrawn and
+  only keeps the 60 s safety net. Prop stays set until zygote-start clears it (a property-only
+  rc trigger cleared it instantly at runtime). Log: /data/misc/inkpalm/poweroff.log.
+- `tools/regress.sh` (30 PASS): default checks incl. predraw dry runs with HWC-draw proof;
+  `--live-poweroff --yes` = automated real power-off over USB (user only presses power to boot);
+  `--arm-poweroff --yes` / `--after-poweroff` = unplugged path through the bridge.
 
 ## InkControl (tools/inkcontrol/, org.neoport.inkcontrol)
 - Backends: stock Moaan `eink` binder / direct (platform-signed build on test-keys GSIs) /

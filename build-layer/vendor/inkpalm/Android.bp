@@ -72,3 +72,14 @@ prebuilt_etc {
     src: "init/inkpalm-vfix.rc",
     sub_dir: "init",
 }
+
+// /product/overlay/InkPalmPowerWake.apk: a short power press wakes the screen (see
+// power-wake-overlay/AndroidManifest.xml). Enabled + immutable by product-overlay-config.xml.
+// UNVERIFIED: never built (bake.sh builds the same sources with aapt2 and is verified on device).
+runtime_resource_overlay {
+    name: "InkPalmPowerWake",
+    product_specific: true,
+    manifest: "power-wake-overlay/AndroidManifest.xml",
+    resource_dirs: ["power-wake-overlay/res"],
+    sdk_version: "current",
+}

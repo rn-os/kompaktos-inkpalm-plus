@@ -68,6 +68,12 @@ if ! $E2/debugfs -R "stat /system/product/overlay/config/config.xml" "$OUT" 2>/d
   label $p u:object_r:system_file:s0
 fi
 
+# Short power press wakes the screen (static framework RRO, see power-wake-overlay/).
+"$HERE/power-wake-overlay/build.sh" $WORK/InkPalmPowerWake.apk
+p=/system/product/overlay/InkPalmPowerWake.apk
+D "rm $p"; D "write $WORK/InkPalmPowerWake.apk $p"; owner $p
+D "set_inode_field $p mode 0100644"
+label $p u:object_r:system_file:s0
 # Boot-time display fix: a background init service (never blocks boot; patching rw-system.sh,
 # which init runs as a blocking exec at post-fs, hung the boot before USB came up).
 p=/system/phh/inkpalm/inkpalm-vfix.sh

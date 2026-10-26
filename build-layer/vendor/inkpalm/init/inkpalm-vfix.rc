@@ -57,3 +57,19 @@ service inkpalm_poweroff /system/phh/inkpalm/inkpalm-poweroff.sh
 
 on property:sys.shutdown.requested=* && property:ro.product.vendor.device=rk3566_eink
     start inkpalm_poweroff
+
+# Stock /product/etc/build.prop sets traced.relay_producer_port=vsock://-1:2010; this 4.19
+# kernel has no vsock, so A16's Perfetto traced crash-loops at every boot (errno 97). Cleared
+# before persist props load (traced starts on persist.traced.enable).
+on post-fs-data && property:ro.product.vendor.device=rk3566_eink
+    setprop traced.relay_producer_port ""
+
+# An interrupted shutdown could leave the HWC's standby image pointing at the power-off picture
+# (inkpalm-poweroff.sh sets persist.sys.mogu.wallpaper for its final sleep): clear it at boot.
+# EVENT trigger on purpose: a property-only trigger (boot_completed && wallpaper=...) also fires
+# whenever the wallpaper prop is SET at runtime, which cleared it instantly. zygote-start comes
+# once per boot, after persist props are loaded.
+on zygote-start && property:persist.sys.mogu.wallpaper=/data/misc/poweroff.png
+    setprop persist.sys.mogu.wallpaper ""
+on zygote-start && property:persist.sys.mogu.wallpaper=/data/misc/poweroff_nopower.png
+    setprop persist.sys.mogu.wallpaper ""

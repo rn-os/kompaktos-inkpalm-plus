@@ -5,5 +5,8 @@
  /data/system/overlays.xml wins). Installed as /system/product/overlay/config/config.xml.
 -->
 <config>
+    <!-- Short power press wakes the screen (power-wake-overlay/). Immutable entries must come
+         before mutable ones, or zygote refuses the file and the device boot-loops. -->
+    <overlay package="org.neoport.inkpalm.overlay.powerwake" mutable="false" enabled="true" />
     <overlay package="com.android.internal.systemui.navbar.gestural" mutable="true" enabled="true" />
 </config>

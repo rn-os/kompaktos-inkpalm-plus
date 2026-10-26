@@ -3,6 +3,8 @@
 #   display fix   stock A11 libs + stub libheif overlaid on /vendor/lib64 by init (inkpalm-vfix.rc)
 #   touch         fts_ts.idc, ORIENTATION_270
 #   navigation    gesture nav default (product overlay config; one capacitive button only)
+#   power key     InkPalmPowerWake RRO: short press wakes from sleep
+#   power-off     inkpalm-poweroff.sh: HWC power-off image at shutdown
 #   first boot    inkpalm-defaults.sh (wake-on-plug off, density 312; once, marker-guarded)
 #   boot anim     KompaktOS animation rescaled to 720x1440 (blobs/bootanimation.zip)
 #   e-ink/light   InkControl as a privileged platform-signed app + the transitional root bridge
@@ -26,7 +28,8 @@ PRODUCT_PACKAGES += \
     libheif_inkpalm_stub \
     inkpalm-vfix.rc \
     inkpalm_script_inkpalm_vfix \
-    inkpalm_script_inkpalm_defaults
+    inkpalm_script_inkpalm_defaults \
+    inkpalm_script_inkpalm_poweroff
 
 # E-ink bridge: TRANSITIONAL. InkControl is platform-signed in this build and sets sys.eink.*
 # itself; the bridge remains for the frontlight (/proc/aw99703*) and the sleep image.
@@ -43,7 +46,11 @@ PRODUCT_PACKAGES += InkControl
 PRODUCT_COPY_FILES += \
     vendor/inkpalm/vendor-fix/fts_ts.idc:$(TARGET_COPY_OUT_SYSTEM)/usr/idc/fts_ts.idc
 
-# Gesture navigation by default; still switchable in Settings.
+# Short power press wakes the screen (static config the stock vendor never set; Android.bp).
+PRODUCT_PACKAGES += InkPalmPowerWake
+
+# Gesture navigation by default; still switchable in Settings. The same config enables
+# InkPalmPowerWake (immutable entries must precede mutable ones, or zygote boot-loops).
 PRODUCT_COPY_FILES += \
     vendor/inkpalm/vendor-fix/product-overlay-config.xml:$(TARGET_COPY_OUT_PRODUCT)/overlay/config/config.xml
 

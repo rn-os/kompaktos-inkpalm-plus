@@ -443,6 +443,7 @@ EXPECT=$(mktemp)
     echo "f system_file 0644 0 0 /system/product/overlay/config/config.xml $V/vendor-fix/product-overlay-config.xml"
     # No content compare: LineageOS's bootanimation module may repack the zip (UNVERIFIED).
     echo "f system_file 0644 0 0 /system/product/media/bootanimation.zip"
+    echo "f system_file 0644 0 0 /system/product/overlay/InkPalmPowerWake.apk"
     echo "f - - - - /system/priv-app/InkControl/InkControl.apk"
     echo "f - - - - /system/etc/permissions/privapp-permissions-org.neoport.inkcontrol.xml"
     echo "f - - - - /system/etc/sysconfig/initial-package-state_org.neoport.inkcontrol.xml"

@@ -14,6 +14,9 @@
 #              system_data_file); reset=1 -> remove them (vendor default art comes back)
 #              poweroff=1 / poweroff_reset=1 -> same for files/poweroff.png -> /data/misc/
 #              poweroff{,_nopower}.png (shown by the HWC at shutdown, see docs/sleep-screen.md)
+#              redraw=1 -> (always-on display) only while the screen is ASLEEP: wake with the
+#              frontlight held off, then sleep, so the HWC redraws the standby image just installed
+#              (apply=1 in the same request is handled first). Never interrupts a user.
 #              export=1 -> copy the vendor art /vendor/media/poweroff{,_nopower}.png (apps may
 #              not read vendor_file) to files/vendor_poweroff{,_nopower}.png, owned by the app,
 #              0600, so the app can compose its own power-off screen from the device's art
@@ -50,6 +53,15 @@ case "$3" in
                 rm -f $t
             done
         fi
+        if grep -q '^redraw=1$' "$R" && [ -z "$(getprop sys.shutdown.requested)" ] \
+           && ! dumpsys power | grep -q 'mWakefulness=Awake'; then
+            leds0() { echo 0 > /proc/aw99703/led_brightness; echo 0 > /proc/aw99703_sec/led_brightness; }
+            input keyevent KEYCODE_WAKEUP
+            i=0; while ! dumpsys power | grep -q 'mWakefulness=Awake' && [ $i -lt 10 ]; do sleep 0.5; i=$((i+1)); done
+            leds0; sleep 2; leds0
+            input keyevent KEYCODE_SLEEP
+            sleep 2; leds0
+        fi
         if grep -q '^poweroff_reset=1$' "$R"; then
             rm -f $M/poweroff.png $M/poweroff_nopower.png
         elif grep -q '^poweroff=1$' "$R"; then
@@ -59,8 +71,11 @@ case "$3" in
     power.req)
         grep -q '^off=1$' "$2/$3" || exit 0
         : > "$2/$3"                                       # one-shot
+        [ -n "$(getprop sys.shutdown.requested)" ] && exit 0   # already shutting down (2nd app)
         dumpsys power | grep -q 'mWakefulness=Awake' && exit 0
         dumpsys battery | grep -q 'powered: true' && exit 0
+        # Draw the power-off image first (wake/sleep via the HWC standby path), then shut down.
+        [ -f /data/misc/poweroff.png ] && sh /system/phh/inkpalm/inkpalm-poweroff.sh predraw
         svc power shutdown || reboot -p
         exit 0 ;;
     *) exit 0 ;;

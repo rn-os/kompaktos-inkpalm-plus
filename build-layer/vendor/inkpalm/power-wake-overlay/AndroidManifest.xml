@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- InkPalm Plus: a short power press wakes the screen. Without this AOSP default (false; the
+     stock Moaan vendor overlay doesn't set it, the Kompakt's own vendor does), Lineage 23's
+     PhoneWindowManager drops power presses that start while asleep ("Ignoring short press of
+     power button because the device is not interactive"). Shaped like phh's working
+     treble overlays (not static, targetSdk 36: a static / older-SDK build got STATE_NO_IDMAP on
+     A16); enabled and made immutable by product-overlay-config.xml. Installed as
+     /system/product/overlay/InkPalmPowerWake.apk. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.neoport.inkpalm.overlay.powerwake">
+    <overlay android:targetPackage="android" android:priority="4" />
+    <application android:hasCode="false" />
+</manifest>

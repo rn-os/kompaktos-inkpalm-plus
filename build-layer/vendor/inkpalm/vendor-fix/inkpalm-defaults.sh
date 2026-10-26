@@ -39,3 +39,34 @@ if [ ! -f $M/defaults-v2 ]; then
     fi
     touch $M/defaults-v2
 fi
+
+# v3: apps that don't fit a WiFi-only e-ink device (no modem, SIM, camera or FM). Removed for
+# user 0 only: reversible with `cmd package install-existing <pkg>`. Verified 2026-10-25 (reboot,
+# Settings ▸ Network, Kompakt tiles fine). Keep: com.kompakt.service (e-ink tiles, refresh flash,
+# per-app config), com.android.phone / telecom / telephony + contacts providers, carrierconfig.
+if [ ! -f $M/defaults-v3 ]; then
+    for p in com.android.dialer com.android.dialer.auto_generated_rro_product__ \
+             com.android.messaging org.lineageos.aperture org.lineageos.aperture.frameworksbaseoverlay \
+             com.google.android.apps.googlecamera.fishfood com.android.cameraextensions \
+             com.android.fmradio com.android.fmradio.recordings me.phh.qcrilam com.android.stk \
+             im.angry.openeuicc com.android.simappdialog com.android.carrierdefaultapp \
+             com.android.imsserviceentitlement com.android.ons com.android.telephony.qns \
+             com.google.android.iwlan com.android.cellbroadcastreceiver com.android.smspush \
+             com.android.calllogbackup com.android.emergency com.android.se \
+             me.phh.treble.overlay.mtkims_telephony me.phh.treble.overlay.flossims_telephony \
+             me.phh.treble.overlay.cafims_telephony me.phh.treble.overlay.hwims_telephony \
+             me.phh.treble.overlay.slsiims_telephony me.phh.treble.overlay.sprdims_telephony; do
+        pm uninstall -k --user 0 $p >/dev/null 2>&1
+    done
+    # The Kompakt app's own screen (Mudita settings, incl. the "Smallest width" row that broke
+    # the density); its service and tiles stay.
+    pm disable --user 0 com.kompakt.service/com.kompakt.service.KompaktActivity >/dev/null 2>&1
+    touch $M/defaults-v3
+fi
+
+# v4: InkPalm+ always-on display updates every few minutes while asleep; Doze otherwise limits
+# its allow-while-idle alarms to about one per 9 min. Persisted by deviceidle.
+if [ ! -f $M/defaults-v4 ]; then
+    pm path com.inkpalmplus >/dev/null 2>&1 && cmd deviceidle whitelist +com.inkpalmplus >/dev/null 2>&1
+    touch $M/defaults-v4
+fi

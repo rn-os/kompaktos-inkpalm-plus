@@ -70,33 +70,51 @@ The companion app is **[InkPalm+](https://github.com/rn-os/inkpalm-plus)** (see 
 ## What works, and what doesn't
 
 Tested by the author on one InkPalm Plus (stock build `MAS_EPD305_L81B804_T44_V09`), KompaktOS 1.2 Global
-Vanilla, slot B. A diagnostics run on the flashed image passed 25 checks.
+Vanilla, slot B. A diagnostics run on the flashed image passed 25 checks, and the on-device regression script (`tools/regress.sh`) passes 30.
 
 Works:
 - Boot, display (Moaan's own e-ink HWC), touch, SELinux enforcing (no navigation bar, so no gesture navigation: Back comes from InkPalm+)
 - E-ink modes (Fast, Soft, Dither, Text, Quality, Auto), full refresh on demand, ghost clearing
   (a full refresh every 40 partial ones)
 - Front light, cold and warm, off at screen-off and restored at screen-on
-- Sleep picture, power-off picture, auto power-off (see the notes; the real-shutdown picture still needs a test)
+- Sleep picture, power-off picture, auto power-off (the power-off picture and a real auto power-off have been verified on the device)
 - Capacitive button as Home
 - Wi-Fi, microG (installed as user apps; KompaktOS's framework accepts the official microG signature)
 - Data from the stock system restored from your own backup (apps and files)
 
 Known limits and open items:
-- **Not tested yet:** auto power-off end to end, the power-menu shutdown picture, front light after a long
-  unplugged sleep, microG self-check.
+- **Not tested yet:** the power-menu shutdown picture, front light after a long unplugged sleep, microG
+  self-check.
 - **Widevine is L3 only** (no `liboemcrypto`), normal for a GSI.
 - **Edge Back gesture:** KompaktOS builds without a navigation bar, so Android's own back gesture never
   attaches. InkPalm+ does Back from an edge swipe instead.
 - **E-ink presets are partly cosmetic.** The vendor HWC may re-pick the mode by screen content depending on
   `persist.sys.mogu.refresh_type` (see `docs/HANDOFF.md`). A new mode only applies to pixels drawn after it.
-- **Perfetto `traced` crash-loops at boot** (the vendor build.prop sets a vsock port, the 4.19 kernel has no
-  vsock). Harmless, tracing only.
+- **Perfetto `traced`:** the vendor build.prop sets a vsock port the 4.19 kernel does not have, so `traced`
+  used to crash-loop at boot. The relay port is now cleared at boot. Tracing only.
 - **Not restored from stock:** the stock font and UI gamma setting, and Moaan's own launcher features.
 - KompaktOS's own e-ink Quick Settings tiles and warmth slider do not drive this panel.
 - Slot A is left empty; there is no second system to fall back to except by restoring your backup.
 - One device, one stock build. Other InkPalm builds are untested.
 - Android 16 on a 4.19 kernel is not something Google supports. Expect rough edges.
+
+## Recent changes
+
+- **Short power press wakes the screen.** Lineage 23 dropped power presses that start while asleep
+  (`config_supportLongPressPowerWhenNonInteractive` is false by default). A small overlay,
+  `gsi/vendor-fix/power-wake-overlay`, turns it on. In an overlay's `config.xml`, immutable entries must come
+  before mutable ones, or zygote dies parsing it and the device boot-loops.
+- **Power-off picture, reworked.** The vendor HWC's shutdown path draws the logo as `EPD_POWER_OFF`, after which
+  the kernel's `ebc_thread` exits for good and any later wake hangs the composer (watchdog loop). The picture
+  is now drawn through the HWC's standby path (`EPD_SUSPEND`), before `svc power shutdown`, with a 60 second
+  safety net. A real auto power-off was verified end to end.
+- **Perfetto `traced` quieted:** the unsupported vsock relay port is cleared at boot.
+- **Unfit apps removed** for user 0 on first boot (telephony, messaging, camera, FM and similar), and the
+  Kompakt launcher screen hidden (`inkpalm-defaults.sh`, defaults v3). v4 adds a Doze exemption for InkPalm+.
+- **Always-on display redraw:** the bridge's standby request can force a redraw (`redraw=1`).
+- **`tools/regress.sh`:** an on-device regression test (power key, bridge, e-ink requests, power-off screen
+  dry run, defaults, auto brightness). It restores what it touches. Results go to `$REGRESS_OUT` or
+  `./regress-results`. `--live-poweroff --yes` and `--arm-poweroff` test a real power-off.
 
 ## What you need to bring
 
