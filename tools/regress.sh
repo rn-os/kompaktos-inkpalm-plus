@@ -241,7 +241,7 @@ if [[ $MODE == live ]]; then
   print "asleep; waiting 30 s like auto power-off..."; pause 30
   t0=$(date +%s)
   # Same order as the bridge's power.req: draw the image first, then request the shutdown.
-  adbt 20 shell "setsid nohup sh -c 'sh /system/phh/inkpalm/inkpalm-poweroff.sh predraw; svc power shutdown' >/dev/null 2>&1 </dev/null &" >/dev/null 2>&1
+  adbt 20 shell "setsid nohup sh -c ': > /dev/inkpalm-poweroff; sh /system/phh/inkpalm/inkpalm-poweroff.sh predraw; svc power shutdown' >/dev/null 2>&1 </dev/null &" >/dev/null 2>&1
   print "shutdown requested; watch the screen (expected: the panda, then off)"
   off=0
   while (( $(date +%s) - t0 < 120 )); do
@@ -553,6 +553,14 @@ chk_boot_health() {   # chk_boot_health  (called last: needs the full run's logc
 
 # ================================================================ after-poweroff mode
 chk_after_poweroff() {
+  # The shutdown hook must find the image already drawn and the screen still asleep. "[Awake]" on
+  # its start line means something woke the panel between the predraw and the shutdown (an AOD
+  # redraw did, 2026-10-26), so the panel may be left on the shutdown dialog.
+  local plog; plog=$(sh_ "cat /data/misc/inkpalm/poweroff.log 2>/dev/null")
+  print -r -- "$plog" > $OUT/raw/poweroff-log.txt
+  if [[ -z $plog ]]; then rec after_poweroff_screen SKIP "no /data/misc/inkpalm/poweroff.log (no power-off image installed?)"
+  elif [[ $plog == *"predrawn, skipping"* ]]; then rec after_poweroff_screen PASS "image predrawn; shutdown hook found the screen asleep"
+  else rec after_poweroff_screen FAIL "shutdown hook did not find a predrawn, asleep screen: $(print -r -- "$plog" | grep 'pre=0' | head -1)"; fi
   local logtxt br hist last start dbx wd
   logtxt=$(sh_ "cat $ARM_LOG 2>&1")
   print -r -- $logtxt > $OUT/raw/arm.log; log "--- watcher log ---"; print -r -- $logtxt | tee -a $OUT/summary.txt; log "-------------------"

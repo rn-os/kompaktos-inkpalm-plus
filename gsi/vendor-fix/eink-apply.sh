@@ -14,7 +14,8 @@
 #              system_data_file); reset=1 -> remove them (vendor default art comes back)
 #              poweroff=1 / poweroff_reset=1 -> same for files/poweroff.png -> /data/misc/
 #              poweroff{,_nopower}.png (shown by the HWC at shutdown, see docs/sleep-screen.md)
-#              redraw=1 -> (always-on display) only while the screen is ASLEEP: wake with the
+#              redraw=1 -> (always-on display) only while the screen is ASLEEP and no power-off is
+#              underway (/dev/inkpalm-poweroff, set by power.req): wake with the
 #              frontlight held off, then sleep, so the HWC redraws the standby image just installed
 #              (apply=1 in the same request is handled first). Never interrupts a user.
 #              export=1 -> copy the vendor art /vendor/media/poweroff{,_nopower}.png (apps may
@@ -53,7 +54,7 @@ case "$3" in
                 rm -f $t
             done
         fi
-        if grep -q '^redraw=1$' "$R" && [ -z "$(getprop sys.shutdown.requested)" ] \
+        if grep -q '^redraw=1$' "$R" && [ -z "$(getprop sys.shutdown.requested)" ] && [ ! -e /dev/inkpalm-poweroff ] \
            && ! dumpsys power | grep -q 'mWakefulness=Awake'; then
             leds0() { echo 0 > /proc/aw99703/led_brightness; echo 0 > /proc/aw99703_sec/led_brightness; }
             input keyevent KEYCODE_WAKEUP
@@ -74,6 +75,10 @@ case "$3" in
         [ -n "$(getprop sys.shutdown.requested)" ] && exit 0   # already shutting down (2nd app)
         dumpsys power | grep -q 'mWakefulness=Awake' && exit 0
         dumpsys battery | grep -q 'powered: true' && exit 0
+        # From here on a power-off is underway: an always-on display redraw must not wake the screen
+        # (InkPalm+ took the predraw's wake/sleep for the user's and re-armed its Live alarm, whose
+        # redraw then woke the panel just before the shutdown, 2026-10-26). /dev is tmpfs: gone at boot.
+        : > /dev/inkpalm-poweroff
         # Draw the power-off image first (wake/sleep via the HWC standby path), then shut down.
         [ -f /data/misc/poweroff.png ] && sh /system/phh/inkpalm/inkpalm-poweroff.sh predraw
         svc power shutdown || reboot -p
