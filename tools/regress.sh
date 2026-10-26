@@ -513,6 +513,42 @@ chk_defaults() {
 }
 
 # ---------------------------------------------------------------- 9. auto brightness
+chk_aod_update() {   # an always-on display Live update: invisible (only the face shows) and dark
+  if (( SKIP_POWER )); then rec aod_update SKIP "--skip-power"; return; fi
+  if ! sh_ "pm path com.inkpalmplus" | grep -q package; then rec aod_update SKIP "InkPalm+ not installed"; return; fi
+  local ss=$(sspid) samples=$OUT/raw/aod-samples.txt shot=$OUT/raw/aod-wake.png ref=$OUT/raw/aod-standby.png
+  : > $samples
+  ensure_awake; pause 3; go_sleep; pause 3
+  awake && { rec aod_update FAIL "screen would not sleep"; wake_up; return; }
+  # The real Live path: InkPalm+'s alarm renders the face, shows the wake cover, asks the bridge
+  # for redraw=1; the bridge wakes with the LEDs held at 0 and sleeps again.
+  sh_ "am broadcast -n 'com.inkpalmplus/.Aod\$Alarm'" >/dev/null
+  local t0=$(date +%s) seen=0 shotdone=0 ledbad="" line w c m
+  while (( $(date +%s) - t0 < 15 )); do
+    line=$(sh_ "echo \$(dumpsys power 2>/dev/null | sed -n 's/.*mWakefulness=//p' | head -1) \$(sed -n 's/.*brightness:\\([0-9]*\\).*/\\1/p' /proc/aw99703/led_brightness | head -1) \$(sed -n 's/.*brightness:\\([0-9]*\\).*/\\1/p' /proc/aw99703_sec/led_brightness | head -1)" | grep -v 'Broken pipe' | tail -1)
+    print -r -- "$(date +%T) $line" >> $samples
+    read -r w c m <<< "$line"
+    [[ $w == Awake ]] && seen=1
+    [[ ${c:-0} != 0 || ${m:-0} != 0 ]] && ledbad+=" ${c}/${m}"
+    if [[ $w == Awake ]] && (( ! shotdone )); then adbt 20 exec-out screencap -p > $shot 2>/dev/null; shotdone=1; fi
+    (( seen )) && [[ $w != Awake ]] && break
+    sleep 0.3
+  done
+  pause 2
+  adbt 20 shell "cat /data/misc/standby.png" > $ref 2>/dev/null
+  local et=$(sh_ "ps -A | grep -c '\\[ebc_thread\\]'" | tail -1) ss2=$(sspid) bad="" mt=""
+  (( seen )) || bad+=" no redraw wake seen in 15 s (Live updates off?)"
+  [[ -n $ledbad ]] && bad+=" frontlight lit during the wake:$ledbad"
+  if (( shotdone )) && [[ -s $shot && -s $ref ]]; then
+    mt=$(python3 $REPO/tools/regress/imgmatch.py $shot $ref 2>/dev/null)
+    [[ ${mt%% *} == <-> || ${mt%% *} == <->.<-> ]] && (( ${mt%% *} < 8 )) || bad+=" mid-wake screenshot is not the face (diff/rot '$mt')"
+  elif (( seen )); then bad+=" no mid-wake screenshot"; fi
+  [[ $et == 0 ]] && bad+=" ebc_thread gone"
+  [[ $ss2 != $ss ]] && bad+=" system_server $ss->$ss2"
+  wake_up
+  [[ -z $bad ]] && rec aod_update PASS "redraw wake: LEDs 0 in $(wc -l < $samples | tr -d ' ') samples, mid-wake screen = face (diff/rot ${mt}), ebc_thread alive" \
+                || rec aod_update FAIL "$bad"
+}
 chk_autobright() {
   ensure_awake || { rec autobright SKIP "screen would not wake"; return; }
   ORIG_BMODE=$(sh_ "settings get system screen_brightness_mode"); ORIG_BRIGHT=$(sh_ "settings get system screen_brightness")
@@ -600,6 +636,7 @@ chk_traced
 chk_bridge
 chk_eink
 chk_poweroff_dry
+chk_aod_update
 chk_defaults
 chk_autobright
 chk_boot_health
