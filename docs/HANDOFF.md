@@ -141,6 +141,9 @@
   Live alarm (5-min marks) could fire a redraw between the predraw and the shutdown and wake the
   panel. power.req now creates /dev/inkpalm-poweroff (tmpfs) and redraw refuses while it exists.
   regress --live-poweroff checks the hook logged "predrawn, skipping" (31 PASS).
+- `tools/regress.sh --quick` (14 checks, ~10 s, no sleep/wake) and `tools/install-inkpalmplus.sh` (signer
+  check, install -r, a11y rebind, grants, then --quick) for app updates; the full suite is for system-image
+  changes.
 - `tools/regress.sh` (30 PASS): default checks incl. predraw dry runs with HWC-draw proof;
   `--live-poweroff --yes` = automated real power-off over USB (user only presses power to boot);
   `--arm-poweroff --yes` / `--after-poweroff` = unplugged path through the bridge.

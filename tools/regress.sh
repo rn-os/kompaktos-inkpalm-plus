@@ -2,6 +2,7 @@
 # InkPalm-KompaktOS regression test for the flashed GSI. Run after every flash / bake.
 #
 #   tools/regress.sh [--serial SERIAL] [--out DIR] [--timeout SECS] [--skip-power]
+#   tools/regress.sh --quick [--serial SERIAL] [--out DIR]  (~20 s InkPalm+ post-install check: no sleep/wake, no settings changes)
 #   tools/regress.sh --arm-poweroff  [--serial SERIAL]     (REAL auto power-off test, interactive)
 #   tools/regress.sh --after-poweroff [--serial SERIAL]    (verify it, then run the default checks)
 #
@@ -22,6 +23,7 @@
 
 SCRIPT_DIR=${0:A:h}
 LIB=$SCRIPT_DIR/lib/inkpalm_os.sh
+[[ -r $SCRIPT_DIR/lib/inkpalmplus.sh ]] && . $SCRIPT_DIR/lib/inkpalmplus.sh
 REPO=${SCRIPT_DIR:h}
 TMO=25
 SETTLE=5            # seconds of quiet after each power-off-screen dry run, before the next wake
@@ -40,11 +42,12 @@ while (( $# )); do
     --out)            OUT=$2; shift 2;;
     --timeout)        TMO=$2; shift 2;;
     --skip-power)     SKIP_POWER=1; shift;;
+    --quick)          MODE=quick; shift;;
     --arm-poweroff)   MODE=arm; shift;;
     --yes)            YES=1; shift;;
     --after-poweroff) MODE=after; shift;;
     --live-poweroff)  MODE=live; shift;;
-    -h|--help)        sed -n '2,19p' $0; exit 0;;
+    -h|--help)        sed -n '2,20p' $0; exit 0;;
     *) print -u2 "unknown arg $1"; exit 2;;
   esac
 done
@@ -60,7 +63,7 @@ RES=$OUT/results.tsv; : > $RES; : > $OUT/summary.txt
 adbt() { local t=$1; shift; perl -e 'alarm shift; exec @ARGV' $t "${ADB[@]}" "$@" </dev/null; }
 sh_()  { adbt $TMO shell "$1" 2>&1 | tr -d '\r'; }              # one device-shell command string, bounded
 shl()  { adbt ${2:-$TMO} shell "$1" 2>&1 | tr -d '\r'; }         # same, explicit timeout: shl <cmd> <secs>
-rec()  { # rec <id> <PASS|FAIL|WARN|SKIP> <detail>
+rec()  { # rec <id> <PASS|FAIL|WARN|SKIP|INFO> <detail>
   local d=${3//$'\t'/ }; d=${d//$'\n'/ | }; d=${d:0:380}
   print -r -- "$1"$'\t'"$2"$'\t'"$d" >> $RES
   printf '%-5s %-22s %s\n' $2 $1 ${d:0:170} | tee -a $OUT/summary.txt
@@ -117,11 +120,16 @@ UID_APP=$(sh_ "stat -c %u $APPDIR 2>/dev/null")      # empty if InkPalm+ was nev
 # ---------------------------------------------------------------- state saved for the EXIT trap
 typeset -A SAVED_REQ                 # req files backed up on the device
 BACKED_UP=0
+QBAK=0                               # quick mode: eink.req backed up on the device
 PO_BASE=""                           # sys.power.shutdown value we found
 CLEANED=0
 cleanup() {
   (( CLEANED )) && return; CLEANED=1
   # 1. flag cleared BEFORE any wake, then the screen comes back
+  if [[ $MODE == quick ]]; then      # quick mode touches nothing but a temp dir (+ eink.req, put back here)
+    (( QBAK )) && sh_ "[ -e $DEVTMP/eink.req.bak ] && cp -p $DEVTMP/eink.req.bak $APPDIR/.regress.tmp && mv -f $APPDIR/.regress.tmp $APPDIR/eink.req && restorecon $APPDIR/eink.req; rm -f $APPDIR/.regress.tmp" >/dev/null
+    sh_ "rm -rf $DEVTMP" >/dev/null; return
+  fi
   sh_ "setprop sys.power.shutdown 0" >/dev/null
   if [[ $MODE != arm ]]; then
     awake || wake_up
@@ -266,6 +274,112 @@ if [[ $MODE == live ]]; then
   for i in {1..20}; do sh_ "cmd overlay lookup android android:bool/config_showNavigationBar" | grep -q -E 'true|false' && break; sleep 2; done
   print "back up; running the after-poweroff and default checks"
   MODE=after; LIVE=1
+fi
+
+# ================================================================ quick mode: InkPalm+ post-install check
+# No screen sleep/wake, no settings/props changes. The only write is an eink.req carrying the CURRENT
+# sys.eink.mode (a no-op the bridge accepts), and the original file is put back afterwards.
+chk_quick() {
+  local t0=$(date +%s) bc dp ver upd inst sg a11y wanted="$APP/$APP.QuickPanelService" bound
+  bc=$(gprop sys.boot_completed)
+  [[ $bc == 1 ]] && rec boot_completed PASS "sys.boot_completed=1" || rec boot_completed FAIL "sys.boot_completed='$bc'"
+
+  dp=$(sh_ "dumpsys package $APP"); print -r -- $dp > $OUT/raw/dumpsys-package.txt
+  inst=$(sh_ "pm path $APP" | head -1 | sed 's/^package://')
+  if [[ -z $inst ]]; then
+    rec app_installed FAIL "$APP is not installed"
+    for a in app_signer a11y_enabled a11y_bound app_process bridge_watch bridge_roundtrip perm_secure_settings perm_write_settings doze_whitelist aod_image app_crash; do rec $a SKIP "$APP absent"; done
+  else
+  ver=$(print -r -- $dp | sed -n 's/^ *versionName=//p' | head -1)
+  upd=$(print -r -- $dp | sed -n 's/^ *lastUpdateTime=//p' | head -1)
+  rec app_installed PASS "$APP versionName=${ver:-?} lastUpdateTime=${upd:-?}"
+  adbt 40 pull $inst $OUT/raw/installed.apk >/dev/null 2>&1
+  sg=$(ipp_apk_signer $OUT/raw/installed.apk 2>/dev/null)
+  if [[ -z $sg ]]; then rec app_signer WARN "cannot read the signer (no apksigner? set ANDROID_HOME)"
+  elif [[ $sg == $IPP_RELEASE_SHA256 ]]; then rec app_signer PASS "signer SHA-256 $sg (release key)"
+  else rec app_signer WARN "signer SHA-256 $sg is NOT the release key $IPP_RELEASE_SHA256"; fi
+
+  # accessibility service: enabled (secure setting) AND bound (dumpsys)
+  a11y=$(sh_ "settings get secure enabled_accessibility_services")
+  [[ ":$a11y:" == *":$APP/.QuickPanelService:"* || ":$a11y:" == *":$wanted:"* ]] \
+    && rec a11y_enabled PASS "QuickPanelService is in enabled_accessibility_services" \
+    || rec a11y_enabled FAIL "QuickPanelService missing from enabled_accessibility_services: '${a11y:0:120}'"
+  bound=$(sh_ "dumpsys accessibility" | awk '/Bound services:/{b=1} /Enabled services:/{b=0} b' | grep -c 'InkPalm+ quick panel')
+  (( bound > 0 )) && rec a11y_bound PASS "QuickPanelService is bound (dumpsys accessibility)" \
+                  || rec a11y_bound FAIL "QuickPanelService is not in 'Bound services' (rebind: tools/install-inkpalmplus.sh rebinds it)"
+
+  local pid; pid=$(sh_ "pidof $APP")
+  [[ -n $pid ]] && rec app_process PASS "$APP running (pid ${pid%% *})" || rec app_process FAIL "$APP process not running"
+
+  # bridge
+  local svc cmds; svc=$(gprop init.svc.inkpalm_eink_bridge)
+  [[ $svc == running ]] && rec bridge_service PASS "init.svc.inkpalm_eink_bridge=running" || rec bridge_service FAIL "init.svc.inkpalm_eink_bridge='$svc'"
+  cmds=$(sh_ "ps -A -o ARGS | grep '^inotifyd' ")
+  [[ $cmds == *"$APPDIR"* ]] && rec bridge_watch PASS "inotifyd watches $APPDIR" || rec bridge_watch FAIL "no inotifyd watch for $APPDIR (reinstall since the bridge started?)"
+
+  # round trip: switch to ANOTHER mode through the bridge (as the app's uid), see it applied, then
+  # switch back the same way. Proves the bridge really applies requests; a mode change on a
+  # static screen draws nothing (a new mode only affects newly drawn pixels).
+  local old new alt back; old=$(gprop sys.eink.mode)
+  if [[ $old != <-> ]]; then rec bridge_roundtrip WARN "sys.eink.mode='$old' is not numeric: round trip not run"
+  elif [[ -z $UID_APP ]]; then rec bridge_roundtrip SKIP "no files dir"
+  else
+    sh_ "mkdir -p $DEVTMP; chmod 700 $DEVTMP; if [ -e $APPDIR/eink.req ]; then cp -p $APPDIR/eink.req $DEVTMP/eink.req.bak; fi" >/dev/null && QBAK=1
+    alt=12; [[ $old == 12 ]] && alt=7
+    req_write eink.req "sys.eink.mode=$alt"
+    new=""; for i in 1 2 3 4 5 6; do sleep 0.5; new=$(gprop sys.eink.mode); [[ $new == $alt ]] && break; done
+    req_write eink.req "sys.eink.mode=$old"
+    back=""; for i in 1 2 3 4 5 6; do sleep 0.5; back=$(gprop sys.eink.mode); [[ $back == $old ]] && break; done
+    [[ $back == $old ]] || sh_ "setprop sys.eink.mode $old" >/dev/null
+    cmds=$(sh_ "ps -A -o ARGS | grep '^inotifyd' ")
+    if [[ $new != $alt ]]; then rec bridge_roundtrip FAIL "bridge did not apply sys.eink.mode=$alt within 3 s (still '$new')"
+    elif [[ $back != $old ]]; then rec bridge_roundtrip FAIL "bridge did not restore sys.eink.mode=$old (got '$back'; restored by setprop)"
+    elif [[ $cmds != *"$APPDIR"* ]]; then rec bridge_roundtrip FAIL "inotifyd watch gone after the write"
+    else rec bridge_roundtrip PASS "bridge applied sys.eink.mode $old -> $alt -> $old via $APPDIR/eink.req (uid $UID_APP)"; fi
+  fi
+
+  # permissions / doze
+  print -r -- $dp | grep -q 'android.permission.WRITE_SECURE_SETTINGS: granted=true' \
+    && rec perm_secure_settings PASS "WRITE_SECURE_SETTINGS granted" || rec perm_secure_settings FAIL "WRITE_SECURE_SETTINGS not granted"
+  local ao; ao=$(sh_ "appops get $APP WRITE_SETTINGS")
+  [[ $ao == *"WRITE_SETTINGS: allow"* ]] && rec perm_write_settings PASS "appops WRITE_SETTINGS allow" || rec perm_write_settings FAIL "appops WRITE_SETTINGS: ${ao:0:80}"
+  sh_ "dumpsys deviceidle whitelist" | grep -q ",$APP," \
+    && rec doze_whitelist PASS "$APP is on the Doze whitelist" || rec doze_whitelist FAIL "$APP not on the Doze whitelist (cmd deviceidle whitelist +$APP)"
+
+  # AOD sleep image
+  local face; face=$(sh_ "sed -n 's/.*name=\"aod_face\">\\(.*\\)<\\/string>.*/\\1/p' /data/data/$APP/shared_prefs/inkpalmplus.xml | head -1")
+  if [[ -z $face || $face == (off|null|OFF|NULL|none|NONE) ]]; then rec aod_image SKIP "no AOD face set (aod_face='${face:-unset}')"
+  else
+    st=$(sh_ "stat -c '%s %U' /data/misc/standby.png 2>/dev/null")
+    [[ -n $st && ${st%% *} -gt 0 ]] && rec aod_image PASS "aod_face=$face; /data/misc/standby.png ${st%% *} bytes" \
+                                     || rec aod_image FAIL "aod_face=$face but /data/misc/standby.png is missing/empty"
+  fi
+
+  # crashes since the last update
+  local n; n=$(adbt 30 logcat -b crash -d -v threadtime -v year 2>&1 | tr -d '\r' | awk -v since="${upd:-0}" '
+      /FATAL EXCEPTION/ { ts=$1" "$2; w=4; next }
+      w>0 { w--; if ($0 ~ /Process: com\.inkpalmplus[ ,]/ && ts >= since) c++ }
+      END { print c+0 }')
+  [[ $n == 0 ]] && rec app_crash PASS "no FATAL EXCEPTION for $APP in logcat -b crash since ${upd:-?}" \
+                || rec app_crash FAIL "$n FATAL EXCEPTION(s) for $APP in logcat -b crash since ${upd:-?}"
+  fi
+
+  # information only: never changed here
+  rec info_rotation INFO "accelerometer_rotation=$(sh_ 'settings get system accelerometer_rotation') user_rotation=$(sh_ 'settings get system user_rotation')"
+  rec info_autobright INFO "screen_brightness_mode=$(sh_ 'settings get system screen_brightness_mode') (1 = auto)"
+  log "quick checks took $(( $(date +%s) - t0 )) s"
+}
+
+if [[ $MODE == quick ]]; then
+  log "results: $OUT   serial=${SERIAL:-$(adbt 10 get-serialno 2>/dev/null)}  (quick InkPalm+ check)"
+  log "-----"
+  chk_quick
+  cleanup
+  log "-----"
+  np=$(grep -c $'\tPASS\t' $RES); nf=$(grep -c $'\tFAIL\t' $RES); nw=$(grep -c $'\tWARN\t' $RES); ns=$(grep -c $'\tSKIP\t' $RES)
+  log "SUMMARY: $np PASS, $nf FAIL, $nw WARN, $ns SKIP   (results: $OUT)"
+  (( nf == 0 ))
+  exit
 fi
 
 # ================================================================ default-mode preparation

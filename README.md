@@ -115,6 +115,12 @@ Known limits and open items:
 - **`tools/regress.sh`:** an on-device regression test (power key, bridge, e-ink requests, power-off screen
   dry run, defaults, auto brightness). It restores what it touches. Results go to `$REGRESS_OUT` or
   `./regress-results`. `--live-poweroff --yes` and `--arm-poweroff` test a real power-off.
+- **`tools/regress.sh --quick`:** about 10 seconds, no screen sleep/wake and no settings changes: InkPalm+
+  installed with its release key, its accessibility service bound, the bridge applying a request from its
+  files dir, permissions, Doze exemption, sleep image, no crashes.
+- **`tools/install-inkpalmplus.sh [latest | <tag> | <file.apk>]`:** installs an InkPalm+ release over the
+  current one (refuses if the signing key differs, since that would wipe the app's data), re-binds the
+  accessibility service and re-grants permissions if Android dropped them, then runs `--quick`.
 
 ## What you need to bring
 
