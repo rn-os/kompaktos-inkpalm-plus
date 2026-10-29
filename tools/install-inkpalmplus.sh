@@ -124,4 +124,4 @@ sh_ "appops get $APP WRITE_SETTINGS" | grep -q 'WRITE_SETTINGS: allow' \
 
 # ---- 6. post-install check
 print "running tools/regress.sh --quick"
-exec $SCRIPT_DIR/regress.sh --quick ${SERIAL:+--serial $SERIAL}
+exec $SCRIPT_DIR/regress.sh --quick ${SERIAL:+--serial} ${SERIAL:+$SERIAL}   # two words: zsh does not split

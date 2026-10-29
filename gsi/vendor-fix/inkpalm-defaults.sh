@@ -70,3 +70,15 @@ if [ ! -f $M/defaults-v4 ]; then
     pm path com.inkpalmplus >/dev/null 2>&1 && cmd deviceidle whitelist +com.inkpalmplus >/dev/null 2>&1
     touch $M/defaults-v4
 fi
+
+# v5: the GSI declares NFC but the panel has no NFC chip or HAL, so com.android.nfc fails to start
+# every ~15 s while awake and on each always-on display wake (ANR "failed to complete startup",
+# 2026-10-29). Removed for user 0 like v3. Logs kept across reboots (16 x 1 MB, /data/misc/logd)
+# so a freeze or crash leaves a trace: `adb root; adb pull /data/misc/logd`.
+if [ ! -f $M/defaults-v5 ]; then
+    pm uninstall -k --user 0 com.android.nfc >/dev/null 2>&1
+    setprop persist.logd.logpersistd.size 16
+    setprop persist.logd.logpersistd.buffer main,system,crash,events,kernel
+    setprop persist.logd.logpersistd logcatd
+    touch $M/defaults-v5
+fi

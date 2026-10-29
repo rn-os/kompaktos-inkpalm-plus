@@ -111,7 +111,11 @@ Known limits and open items:
 - **Perfetto `traced` quieted:** the unsupported vsock relay port is cleared at boot.
 - **Unfit apps removed** for user 0 on first boot (telephony, messaging, camera, FM and similar), and the
   Kompakt launcher screen hidden (`inkpalm-defaults.sh`, defaults v3). v4 adds a Doze exemption for InkPalm+.
+  v5 removes the NFC app (the GSI declares NFC, but the device has no NFC chip, so the app failed to start
+  every ~15 s) and keeps logs across reboots (16 x 1 MB in `/data/misc/logd`) so a freeze leaves a trace.
 - **Always-on display redraw:** the bridge's standby request can force a redraw (`redraw=1`).
+- **Radio toggles:** the bridge's `radio.req` (`wifi`, `bt`, `airplane` = 0/1) switches Wi-Fi, Bluetooth and
+  airplane mode for InkPalm+'s side panel (apps can no longer do this themselves).
 - **`tools/regress.sh`:** an on-device regression test (power key, bridge, e-ink requests, power-off screen
   dry run, defaults, auto brightness). It restores what it touches. Results go to `$REGRESS_OUT` or
   `./regress-results`. `--live-poweroff --yes` and `--arm-poweroff` test a real power-off.

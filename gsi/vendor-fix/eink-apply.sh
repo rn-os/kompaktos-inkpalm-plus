@@ -21,10 +21,25 @@
 #              export=1 -> copy the vendor art /vendor/media/poweroff{,_nopower}.png (apps may
 #              not read vendor_file) to files/vendor_poweroff{,_nopower}.png, owned by the app,
 #              0600, so the app can compose its own power-off screen from the device's art
+#   radio.req: wifi=0|1, bt=0|1, airplane=0|1 -> svc wifi / svc bluetooth / cmd connectivity
+#              airplane-mode (apps targeting API 29+/33+ can no
+#              longer switch these radios themselves; InkPalm+'s panel toggles)
 #   power.req: off=1 -> shut down (InkControl auto power-off), only if the screen is off and
 #              no charger is connected right now, so a stray request can't kill a device in use
 case "$3" in
     eink.req|light.req) ;;
+    radio.req)
+        while IFS='=' read -r k v; do
+            case "$k=$v" in
+                wifi=1) svc wifi enable ;;
+                wifi=0) svc wifi disable ;;
+                bt=1) svc bluetooth enable ;;
+                bt=0) svc bluetooth disable ;;
+                airplane=1) cmd connectivity airplane-mode enable ;;
+                airplane=0) cmd connectivity airplane-mode disable ;;
+            esac
+        done < "$2/$3"
+        exit 0 ;;
     standby.req)
         M=/data/misc; R="$2/$3"; DIR=$2
         # install <name>: files/<name>.png -> $M/<target>.png for each further arg
