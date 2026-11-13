@@ -11,6 +11,8 @@
 #   power-wake-overlay/build.sh (Android SDK build-tools 36.0.0 and platform 36 under
 #   ~/Library/Android/sdk, and keys/inkpalm.jks with password android). Optional env
 #   POWER_WAKE_APK=<apk>: use that prebuilt APK instead, so the SDK is not needed here.
+# - adds the Wi-Fi overlay as /system/product/overlay/InkPalmWifiNoSae.apk, built the same way by
+#   wifi-no-sae-overlay/build.sh, or taken prebuilt from env WIFI_NOSAE_APK=<apk>.
 # - installs inkpalm-vfix.rc + inkpalm-vfix.sh: a background service (post-fs-data, permissive
 #   phhsu_daemon domain) that overlays that dir over /vendor/lib64 on rk3566_eink vendors and
 #   restarts the display stack.
@@ -80,6 +82,16 @@ else
 fi
 p=/system/product/overlay/InkPalmPowerWake.apk
 D "rm $p"; D "write $WORK/InkPalmPowerWake.apk $p"; owner $p
+D "set_inode_field $p mode 0100644"
+label $p u:object_r:system_file:s0
+# WPA2/WPA3 mixed-mode networks connect with WPA2 (static wifi RRO, see wifi-no-sae-overlay/).
+if [ -n "${WIFI_NOSAE_APK:-}" ]; then
+  cp "$WIFI_NOSAE_APK" $WORK/InkPalmWifiNoSae.apk
+else
+  "$HERE/wifi-no-sae-overlay/build.sh" $WORK/InkPalmWifiNoSae.apk
+fi
+p=/system/product/overlay/InkPalmWifiNoSae.apk
+D "rm $p"; D "write $WORK/InkPalmWifiNoSae.apk $p"; owner $p
 D "set_inode_field $p mode 0100644"
 label $p u:object_r:system_file:s0
 # Boot-time display fix: a background init service (never blocks boot; patching rw-system.sh,
