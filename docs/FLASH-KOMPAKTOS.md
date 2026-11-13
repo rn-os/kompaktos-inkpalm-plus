@@ -18,6 +18,7 @@ fstab mounts all five slot-B partitions without avb, so vbmeta is not touched.
 ## Steps (direct USB-C cable, not the hub)
 1. `adb reboot fastboot`  → fastbootd (userspace; reports `unlocked: yes`)
 2. Check: `fastboot getvar is-userspace` = yes, `fastboot getvar current-slot` = b
+   (or a, for an image built with `build_super.py --slot a`: the slot must match the image)
 3. `fastboot flash super ~/InkPalm-Images/kompaktos/flash/super-kompaktos-vanilla.img`
    (the client resparses it into ≤64 MiB chunks)
 4. `fastboot erase metadata` and `fastboot -w`   (clean data; also drops the DSU config)
