@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- InkPalm Plus: join WPA2/WPA3 mixed-mode networks with WPA2. Android 16 upgrades such networks
+     to WPA3 (SAE) whenever the Wi-Fi HAL reports SAE support, which the InkPalm's does, but its
+     driver rejects the SAE connect ("nl80211: MLME connect failed: ret=-2") and Android does not
+     fall back, so the network never connects. Stock Android 11 did not upgrade. This sets
+     config_wifiSaeUpgradeEnabled to false. WPA3-only networks still cannot work on this driver.
+     Shaped like phh's treble-overlay-wifi.apk (static, targetName WifiCustomization, the
+     overlayable that holds the setting). Installed as
+     /system/product/overlay/InkPalmWifiNoSae.apk. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.neoport.inkpalm.overlay.wifinosae">
+    <overlay android:targetPackage="com.android.wifi.resources"
+        android:targetName="WifiCustomization"
+        android:isStatic="true"
+        android:priority="1" />
+    <application android:hasCode="false" />
+</manifest>

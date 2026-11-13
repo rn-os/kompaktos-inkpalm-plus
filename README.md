@@ -86,6 +86,8 @@ Known limits and open items:
 - **Not tested yet:** the power-menu shutdown picture, front light after a long unplugged sleep, microG
   self-check.
 - **Widevine is L3 only** (no `liboemcrypto`), normal for a GSI.
+- **No WPA3-only Wi-Fi.** The Wi-Fi driver rejects WPA3 (SAE) connections. WPA2 and WPA2/WPA3 mixed-mode
+  networks work (see Recent changes).
 - **Edge Back gesture:** KompaktOS builds without a navigation bar, so Android's own back gesture never
   attaches. InkPalm+ does Back from an edge swipe instead.
 - **E-ink presets are partly cosmetic.** The vendor HWC may re-pick the mode by screen content depending on
@@ -100,6 +102,11 @@ Known limits and open items:
 
 ## Recent changes
 
+- **WPA2/WPA3 mixed-mode Wi-Fi connects.** Android 16 upgrades mixed-mode networks to WPA3 (SAE) because the
+  Wi-Fi HAL reports SAE support, but the driver then fails the connect (`nl80211: MLME connect failed: ret=-2`)
+  and Android never falls back, so such networks showed "Can't connect". A static overlay,
+  `gsi/vendor-fix/wifi-no-sae-overlay`, sets `config_wifiSaeUpgradeEnabled` to false, so they join with WPA2,
+  as on stock. A fabricated overlay (`cmd overlay fabricate`) did not survive a reboot, so it is baked in.
 - **Short power press wakes the screen.** Lineage 23 dropped power presses that start while asleep
   (`config_supportLongPressPowerWhenNonInteractive` is false by default). A small overlay,
   `gsi/vendor-fix/power-wake-overlay`, turns it on. In an overlay's `config.xml`, immutable entries must come
@@ -148,6 +155,9 @@ This repo ships no Moaan, Rockchip, Google or KompaktOS binaries, on purpose. Yo
 5. **A Mac or Linux computer** with `adb` and `fastboot` (platform-tools), Python 3, clang and `lld` for the stub,
    and e2fsprogs (`e2fsck`, `resize2fs`, `debugfs`; `bake.sh` expects Homebrew's path on macOS and may need a path change on Linux).
    `build_super.py` is plain Python (no `lpmake` needed).
+   For `bake.sh`'s power-wake overlay: Android SDK build-tools 36.0.0 and platform 36 in `~/Library/Android/sdk`, and
+   a signing key at `keys/inkpalm.jks` with password `android` (any key; make one with `keytool`). Or build the APK
+   elsewhere and pass it as `POWER_WAKE_APK=<apk>` (see the header of `gsi/vendor-fix/bake.sh`).
 6. **The InkPalm+ app** (via Obtainium, from [its repo](https://github.com/rn-os/inkpalm-plus)), for the e-ink and light controls.
    Version 1.1.0 or later.
 7. Optional: your own PNGs for the sleep and power-off screens. Moaan's pictures are not included.
