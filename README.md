@@ -148,6 +148,9 @@ This repo ships no Moaan, Rockchip, Google or KompaktOS binaries, on purpose. Yo
 5. **A Mac or Linux computer** with `adb` and `fastboot` (platform-tools), Python 3, clang and `lld` for the stub,
    and e2fsprogs (`e2fsck`, `resize2fs`, `debugfs`; `bake.sh` expects Homebrew's path on macOS and may need a path change on Linux).
    `build_super.py` is plain Python (no `lpmake` needed).
+   For `bake.sh`'s power-wake overlay: Android SDK build-tools 36.0.0 and platform 36 in `~/Library/Android/sdk`, and
+   a signing key at `keys/inkpalm.jks` with password `android` (any key; make one with `keytool`). Or build the APK
+   elsewhere and pass it as `POWER_WAKE_APK=<apk>` (see the header of `gsi/vendor-fix/bake.sh`).
 6. **The InkPalm+ app** (via Obtainium, from [its repo](https://github.com/rn-os/inkpalm-plus)), for the e-ink and light controls.
    Version 1.1.0 or later.
 7. Optional: your own PNGs for the sleep and power-off screens. Moaan's pictures are not included.

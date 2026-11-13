@@ -7,6 +7,10 @@
 # - optional env BOOTANIM=<zip>: replaces /system/product/media/bootanimation.zip (the dark variant
 #   bootanimation-dark.zip is a symlink to it on KompaktOS, so one replacement covers both).
 #   Build the zip with tools/bootanim/rescale_bootanim.py.
+# - adds the power-wake overlay as /system/product/overlay/InkPalmPowerWake.apk, built by
+#   power-wake-overlay/build.sh (Android SDK build-tools 36.0.0 and platform 36 under
+#   ~/Library/Android/sdk, and keys/inkpalm.jks with password android). Optional env
+#   POWER_WAKE_APK=<apk>: use that prebuilt APK instead, so the SDK is not needed here.
 # - installs inkpalm-vfix.rc + inkpalm-vfix.sh: a background service (post-fs-data, permissive
 #   phhsu_daemon domain) that overlays that dir over /vendor/lib64 on rk3566_eink vendors and
 #   restarts the display stack.
@@ -69,7 +73,11 @@ if ! $E2/debugfs -R "stat /system/product/overlay/config/config.xml" "$OUT" 2>/d
 fi
 
 # Short power press wakes the screen (static framework RRO, see power-wake-overlay/).
-"$HERE/power-wake-overlay/build.sh" $WORK/InkPalmPowerWake.apk
+if [ -n "${POWER_WAKE_APK:-}" ]; then
+  cp "$POWER_WAKE_APK" $WORK/InkPalmPowerWake.apk
+else
+  "$HERE/power-wake-overlay/build.sh" $WORK/InkPalmPowerWake.apk
+fi
 p=/system/product/overlay/InkPalmPowerWake.apk
 D "rm $p"; D "write $WORK/InkPalmPowerWake.apk $p"; owner $p
 D "set_inode_field $p mode 0100644"
