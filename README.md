@@ -160,6 +160,8 @@ This repo ships no Moaan, Rockchip, Google or KompaktOS binaries, on purpose. Yo
    `gsi/vendor-fix/bake.sh <kompaktos-system.img> <baked.img> <libdir> gsi/vendor-fix/fts_ts.idc`
    (set `GROW_MB=0` if the image must keep its size, and `BOOTANIM=` for a rescaled boot animation; see the script header).
 4. Build a `super` image from your own stock super backup: `tools/build_super.py <stock_super.img> <baked.img> <out_super.img>`.
+   It uses slot B, as on the author's device. If your stock build is in slot A (`adb shell getprop ro.boot.slot_suffix`
+   says `_a`), add `--slot a`: the GSI then goes in `system_a` beside slot A's stock partitions.
 5. Flash it as described in **[docs/FLASH-KOMPAKTOS.md](docs/FLASH-KOMPAKTOS.md)**. This **erases `super`, `userdata` and `metadata`**.
 6. First boot takes several minutes with no feedback on e-ink. Install InkPalm+ (1.1.0 or later), grant its permissions, enable its accessibility service.
 7. To go back to stock: **[docs/REVERT.md](docs/REVERT.md)** (flash your stock `super` backup, wipe, reboot).

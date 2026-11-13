@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Build a custom `super` image for the InkPalm Plus from the stock super backup.
 
-usage: build_super.py <stock_super.img> <new_system.img> <out_super.img>
+usage: build_super.py [--slot a|b] <stock_super.img> <new_system.img> <out_super.img>
 
-Layout written (same geometry/block device as stock, metadata v10.0):
+Layout written (same geometry/block device as stock, metadata v10.0), for slot b (the default):
   group rockchip_dynamic_partitions_b, max = whole usable super
     system_b      <- new_system.img (the GSI, e.g. KompaktOS with our fixes)
     system_ext_b, vendor_b, product_b, odm_b <- copied byte-for-byte from stock slot B
@@ -11,6 +11,12 @@ Layout written (same geometry/block device as stock, metadata v10.0):
 Stock slot-B's own system_b is dropped. The stock boot_b fstab first-stage-mounts all five
 slot-B logical partitions (no avb flags), which is the combination proven by the DSU boots.
 The same metadata is written to all 3 metadata slots, primary and backup copies.
+
+--slot a writes the mirror image: the GSI as system_a, slot A's stock partitions, and slot B
+empty. Use it when the stock build to keep is in slot A (`fastboot getvar current-slot` says a).
+Stock is then read from metadata slot 0, slot A's view, instead of slot 1: after an update into
+slot A, slot 1 can still list slot A's partitions as they were before it. Slot A was not used on
+the device this port was first made on, whose stock build was in slot B.
 """
 import hashlib
 import os
@@ -49,22 +55,29 @@ def name36(s):
 
 
 def main():
-    stock, system_img, out = sys.argv[1:4]
+    args = sys.argv[1:]
+    slot = "b"
+    if args[:1] == ["--slot"]:
+        slot, args = args[1], args[2:]
+    if slot not in ("a", "b") or len(args) != 3:
+        sys.exit(__doc__)
+    stock, system_img, out = args
     f = open(stock, "rb")
     f.seek(GEOM_OFF)
     geom = f.read(4096)
     assert struct.unpack("<I", geom[:4])[0] == 0x616C4467
     max_size, slots, _ = struct.unpack("<III", geom[40:52])
-    groups, parts, bdev = read_meta(f, 1, max_size)  # metadata slot 1 = slot b view
+    groups, parts, bdev = read_meta(f, "ab".index(slot), max_size)  # metadata slot 0/1 = slot a/b view
     first_sector, align, align_off, dev_size = struct.unpack("<QIIQ", bdev[:24])
     assert dev_size == os.path.getsize(stock), "block device size != stock super image size"
     gnames = [g[0].split(b"\0")[0].decode() for g in groups]
-    ga, gb = gnames.index("rockchip_dynamic_partitions_a"), gnames.index("rockchip_dynamic_partitions_b")
+    gused = gnames.index(f"rockchip_dynamic_partitions_{slot}")
+    gempty = gnames.index(f"rockchip_dynamic_partitions_{'ba'['ab'.index(slot)]}")
     stock_parts = {p[0]: p for p in parts}
 
     # Payload sources, in on-disk order.
-    order = [("system_b", ("file", system_img))]
-    for n in ("system_ext_b", "vendor_b", "product_b", "odm_b"):
+    order = [(f"system_{slot}", ("file", system_img))]
+    for n in (f"{p}_{slot}" for p in ("system_ext", "vendor", "product", "odm")):
         _, _, _, ex = stock_parts[n]
         assert len(ex) == 1 and ex[0][1] == 0, f"{n}: expected one linear extent"
         order.append((n, ("stock", ex[0][2] * SECTOR, ex[0][0] * SECTOR)))
@@ -85,7 +98,7 @@ def main():
     assert pos <= dev_size, f"does not fit: need {pos} of {dev_size}"
     print(f"layout uses {pos / 1e9:.3f} of {dev_size / 1e9:.3f} GB")
 
-    # Tables: partitions (all stock names, *_a empty), extents, groups, block device.
+    # Tables: partitions (all stock names, the other slot's empty), extents, groups, block device.
     ptab, etab = b"", b""
     for name, attr, gi, _ in parts:
         if name in alloc:
@@ -97,10 +110,10 @@ def main():
         ptab += name36(name) + struct.pack("<IIII", attr, fi, ne, gi)
     gtab = b""
     for i, (gname, (flags, gmax)) in enumerate(groups):
-        if i == gb:
+        if i == gused:
             gmax = usable
-        elif i == ga:
-            gmax = 1024 * 1024  # nothing allocated in slot A
+        elif i == gempty:
+            gmax = 1024 * 1024  # nothing allocated in the other slot
         gtab += gname + struct.pack("<IQ", flags, gmax)
     tables = ptab + etab + gtab + bdev
     n_parts, n_ext, n_grp = len(parts), len(etab) // 24, len(groups)
